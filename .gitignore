@@ -4,7 +4,7 @@ jikesrvm.iml
 /.ant.properties
 
 # Files for Eclipse project
-/.project
+**/.project
 /.settings
 /.classpath
 /.pmd
