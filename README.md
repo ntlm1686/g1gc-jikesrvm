@@ -1,4 +1,5 @@
 # g1gc-jikesrvm
+## Young Gen GC (modified from semispace GC)
 On this branch, I implemented a simple young generation GC
 which composed of Eden space and From/To Space. All new objects
 are allocating to the Eden Space. During the GC period, live
