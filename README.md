@@ -16,3 +16,7 @@ Hello, World!
 ```
 ### test
 Please refer to Userguide Chapter 11 The MMTk Test Harness.
+```
+# Example of standalone test
+$ java -jar target/mmtk/mmtk-harness.jar MMTk/harness/test-scripts/Alignment.script plan=YG
+```
