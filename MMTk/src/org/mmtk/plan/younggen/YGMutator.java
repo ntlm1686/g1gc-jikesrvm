@@ -28,7 +28,7 @@ public class YGMutator extends StopTheWorldMutator {
     @Override
     @Inline
     public Address alloc(int bytes, int align, int offset, int allocator, int site) {
-        if (allocator == YG.ALLOC_SS)
+        if (allocator == YG.ALLOC_YG)
             return ss.alloc(bytes, align, offset);
         else
             return super.alloc(bytes, align, offset, allocator, site);
@@ -37,7 +37,7 @@ public class YGMutator extends StopTheWorldMutator {
     @Override
     @Inline
     public void postAlloc(ObjectReference object, ObjectReference typeRef, int bytes, int allocator) {
-        if (allocator == YG.ALLOC_SS)
+        if (allocator == YG.ALLOC_YG)
             return;
         super.postAlloc(object, typeRef, bytes, allocator);
     }
