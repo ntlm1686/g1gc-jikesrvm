@@ -15,7 +15,7 @@ $ dist/BaseBaseYoungGen_x86_64-linux/rvm HelloWorld
 Hello, World!
 ```
 ### test
-Please refer to Userguide Chapter 11 The MMTk Test Harness.
+Please refer to [Userguide Chapter 11 The MMTk Test Harness](https://www.jikesrvm.org/UserGuide/TheMMTkTestHarness/index.html#x13-14200011.4).
 ```
 # Example of standalone test
 $ java -jar target/mmtk/mmtk-harness.jar MMTk/harness/test-scripts/Alignment.script plan=YG
