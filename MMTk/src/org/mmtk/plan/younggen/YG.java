@@ -1,16 +1,12 @@
 package org.mmtk.plan.younggen;
 
-import org.mmtk.plan.Plan;
-import org.mmtk.plan.StopTheWorld;
-import org.mmtk.plan.Trace;
-import org.mmtk.plan.TransitiveClosure;
+import org.mmtk.plan.*;
 import org.mmtk.policy.CopySpace;
 import org.mmtk.policy.Space;
 import org.mmtk.utility.heap.VMRequest;
-import org.vmmagic.pragma.Inline;
-import org.vmmagic.pragma.Interruptible;
-import org.vmmagic.pragma.Uninterruptible;
-import org.vmmagic.unboxed.ObjectReference;
+
+import org.vmmagic.pragma.*;
+import org.vmmagic.unboxed.*;
 
 @Uninterruptible
 public class YG extends StopTheWorld {
@@ -49,20 +45,24 @@ public class YG extends StopTheWorld {
     @Override
     @Inline
     public final void collectionPhase(short phaseId) {
-        if (phaseId == PREPARE) {
+        if (phaseId == YG.PREPARE) {
             hi = !hi;
             eden.prepare(true); // eden is always from space
             cs0.prepare(hi);
             cs1.prepare(!hi);
             ygTrace.prepare();
+            super.collectionPhase(phaseId);
+            return;
         }
         if (phaseId == CLOSURE) {
             ygTrace.prepare();
             return;
         }
-        if (phaseId == PREPARE) {
+        if (phaseId == YG.RELEASE) {
             fromSpace().release();
             eden.release();
+            super.collectionPhase(phaseId);
+            return;
         }
         super.collectionPhase(phaseId);
     }
@@ -104,7 +104,7 @@ public class YG extends StopTheWorld {
 
     @Override
     public boolean willNeverMove(ObjectReference object) {
-        if (Space.isInSpace(CS0, object) || Space.isInSpace(CS1, object))
+        if (Space.isInSpace(EDEN, object) || Space.isInSpace(CS0, object) || Space.isInSpace(CS1, object))
             return false;
         return super.willNeverMove(object);
     }

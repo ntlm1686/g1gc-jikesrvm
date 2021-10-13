@@ -1,1 +1,1 @@
-package org.mmtk.plan.semi;
+package org.mmtk.plan.youngen;

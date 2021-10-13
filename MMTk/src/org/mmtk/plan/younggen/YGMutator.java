@@ -53,9 +53,16 @@ public class YGMutator extends StopTheWorldMutator {
     @Override
     @Inline
     public void collectionPhase(short phaseId, boolean primary) {
-        if (phaseId == YG.COMPLETE) {
+        if (phaseId == YG.PREPARE) {
+            super.collectionPhase(phaseId, primary);
+            return;
+        }
+
+        if (phaseId == YG.RELEASE) {
+            super.collectionPhase(phaseId, primary);
             // swap from and to space
             yg.rebind(YG.eden);
+            return;
         }
         super.collectionPhase(phaseId, primary);
     }

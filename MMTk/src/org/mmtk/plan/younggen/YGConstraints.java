@@ -1,8 +1,8 @@
 package org.mmtk.plan.younggen;
 
-import org.mmtk.plan.StopTheWorldConstraints;
+import org.mmtk.plan.*;
 import org.mmtk.policy.CopySpace;
-import org.vmmagic.pragma.Uninterruptible;
+import org.vmmagic.pragma.*;
 
 @Uninterruptible
 public class YGConstraints extends StopTheWorldConstraints {

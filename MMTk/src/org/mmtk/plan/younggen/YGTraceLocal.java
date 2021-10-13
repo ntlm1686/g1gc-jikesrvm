@@ -3,9 +3,8 @@ package org.mmtk.plan.younggen;
 import org.mmtk.plan.Trace;
 import org.mmtk.plan.TraceLocal;
 import org.mmtk.policy.Space;
-import org.vmmagic.pragma.Inline;
-import org.vmmagic.pragma.Uninterruptible;
-import org.vmmagic.unboxed.ObjectReference;
+import org.vmmagic.pragma.*;
+import org.vmmagic.unboxed.*;
 
 @Uninterruptible
 public class YGTraceLocal extends TraceLocal {

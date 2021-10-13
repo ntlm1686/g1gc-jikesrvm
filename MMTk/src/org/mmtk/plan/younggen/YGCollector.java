@@ -67,6 +67,8 @@ public class YGCollector extends StopTheWorldCollector {
         if (phaseId == YG.PREPARE) {
             yg.rebind(YG.toSpace());
             los.prepare(true);
+            super.collectionPhase(phaseId, primary);
+            return;
         }
         if (phaseId == YG.CLOSURE) {
             trace.completeTrace();
@@ -76,6 +78,8 @@ public class YGCollector extends StopTheWorldCollector {
         if (phaseId == YG.PREPARE) {
             trace.release();
             los.release(true);
+            super.collectionPhase(phaseId, true);
+            return;
         }
         super.collectionPhase(phaseId, primary);
     }
