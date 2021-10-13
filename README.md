@@ -20,3 +20,4 @@ Please refer to Userguide Chapter 11 The MMTk Test Harness.
 # Example of standalone test
 $ java -jar target/mmtk/mmtk-harness.jar MMTk/harness/test-scripts/Alignment.script plan=YG
 ```
+![image](https://user-images.githubusercontent.com/78901505/137200218-57f9f166-14e0-439b-ac17-c684216b7893.png)
