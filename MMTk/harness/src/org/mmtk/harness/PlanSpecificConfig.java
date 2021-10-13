@@ -118,7 +118,7 @@ public class PlanSpecificConfig {
         .addExpectedSpaces("ss0", "ss1"),
         "SS", "SemiSpace");
     register(
-        new PlanSpecific("org.mmtk.plan.semispace.SS")
+        new PlanSpecific("org.mmtk.plan.younggen.YG")
         .heapFactor(18816 / BASE_HEAP)
         .addExpectedSpaces("cs0", "cs1", "eden"),
         "YG", "YoungGen");
