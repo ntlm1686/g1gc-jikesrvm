@@ -5,6 +5,8 @@ which composed of Eden space and From/To Space. All new objects
 are allocating to the Eden Space. During the GC period, live
 objects in Eden and From space are copied to To space, then
 all dead objects in Eden and From space are wiped.
+### environment
+See https://github.com/ljjsalt/jikesrvm-dev-env for how to build a development environment.
 ### build
 ```
 $ bin/buildit localhost BaseBaseYoungGen
