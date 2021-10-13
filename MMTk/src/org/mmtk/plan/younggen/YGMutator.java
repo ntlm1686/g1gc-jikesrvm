@@ -12,16 +12,17 @@ import org.vmmagic.unboxed.ObjectReference;
 @Uninterruptible
 public class YGMutator extends StopTheWorldMutator {
 
-    protected final CopyLocal ss;
+    protected final CopyLocal yg;
 
     // CopyLocal which used to allocate objects in copy space
     public YGMutator() {
-        ss = new CopyLocal();
+        yg = new CopyLocal();
     }
 
     @Override
     public void initMutator(int id) {
-        super.initMutator(id);      // register mutator thread
+        super.initMutator(id); // register mutator thread
+        yg.rebind(YG.eden);
     }
 
     // provide alloc methods for object allocation, and postAlloc for assitance
@@ -29,7 +30,7 @@ public class YGMutator extends StopTheWorldMutator {
     @Inline
     public Address alloc(int bytes, int align, int offset, int allocator, int site) {
         if (allocator == YG.ALLOC_YG)
-            return ss.alloc(bytes, align, offset);
+            return yg.alloc(bytes, align, offset);
         else
             return super.alloc(bytes, align, offset, allocator, site);
     }
@@ -44,8 +45,8 @@ public class YGMutator extends StopTheWorldMutator {
 
     @Override
     public Allocator getAllocatorFromSpace(Space space) {
-        if (space == YG.cs0 || space == YG.cs1)
-            return ss;
+        if (space == YG.cs0 || space == YG.cs1 || space == YG.eden)
+            return yg;
         return super.getAllocatorFromSpace(space);
     }
 
@@ -54,10 +55,15 @@ public class YGMutator extends StopTheWorldMutator {
     public void collectionPhase(short phaseId, boolean primary) {
         if (phaseId == YG.COMPLETE) {
             // swap from and to space
-            ss.rebind(YG.toSpace());
+            yg.rebind(YG.eden);
         }
         super.collectionPhase(phaseId, primary);
     }
 
-    
+    public final void show() {
+        yg.show();
+        los.show();
+        immortal.show();
+    }
+
 }

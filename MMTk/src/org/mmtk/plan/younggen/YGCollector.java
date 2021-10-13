@@ -28,6 +28,8 @@ public class YGCollector extends StopTheWorldCollector {
     /*******************************************************
      * 
      * copy
+     * * The methods defined here is used to copy objects from From space,
+     * * Copy is performed during tracing objects.
      */
 
     @Override
@@ -78,6 +80,7 @@ public class YGCollector extends StopTheWorldCollector {
         super.collectionPhase(phaseId, primary);
     }
 
+    /** Unknown */
     public static boolean isSemiSpaceObject(ObjectReference object) {
         return Space.isInSpace(YG.CS0, object) || Space.isInSpace(YG.CS1, object) || Space.isInSpace(YG.EDEN, object);
     }
