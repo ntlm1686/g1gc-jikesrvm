@@ -15,4 +15,4 @@ $ dist/BaseBaseYoungGen_x86_64-linux/rvm HelloWorld
 Hello, World!
 ```
 ### test
-Please refer to harness unit test.
+Please refer to Userguide Chapter 11 The MMTk Test Harness.
