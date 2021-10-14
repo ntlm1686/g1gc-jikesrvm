@@ -1,7 +1,7 @@
 # Garbage First Collector in JikesRVM
 ## Roadmap
-1. Parallel GC with small numbers of regions including Eden and Survivor.
-2. Parallel GC with more regions including Eden, Survivor, and Old gen.
+1. Parallel GC with regions including eden and survivor space.
+2. Parallel GC with regions including eden, survivor, and old gen.
 3. Concurrent?
 
 ## Implementation Plan
@@ -24,33 +24,45 @@ MMTk/src/org/mmtk
 Describe how a range of virtual address space is managed. 
 - G1Space
 
-    We divide heap into regions of the same size. Each region will be accessed by the address where the region starts. An instance of ```G1Space``` uses a ```AddressArray``` to stores the start address of each region. 
+    This class implements a garbage first space which divides the heap into regions of the same size. Each region will be accessed by the address where the region starts. This way also allows the memory space to be discontiguous, and allows the space increase its size as the application demands.
     
-    In other words, an instance of this class holds a global pool of regions, but this class do not directly allocate objects into regions.
+    Constants
     ```java
-    protected final AddressArray regions = AddressArray.create(number_of_regions);
+    public static final int MAX_NUM_REGION = 2000;
+    // TODO: public static final int REGIONS_SIZE
+    public int num_current_regions;
     ```
-    We can also use extra ```AddressArray```s to store the roles of each region.
+    An instance of ```G1Space``` uses a ```AddressArray``` to stores the start address of each region. In other words, an instance of this class holds a global pool of regions, but this class do not directly allocate objects into regions.
     ```java
-    protected final AddressArray eden = AddressArray.create(number_of_regions);
-    protected final AddressArray survivor = AddressArray.create(number_of_regions);
-    protected final AddressArray old = AddressArray.create(number_of_regions);
+    protected final AddressArray regions = AddressArray.create(MAX_NUM_REGION);
     ```
-    There also should be methods for the caller to access the ```eden```, ```survivor```, and ```old```. These methods may remove elements from ```AddressArray```.
+    We can also use extra ```AddressArray``` to store the roles of each region.
+    ```java
+    protected final AddressArray eden = AddressArray.create(MAX_NUM_REGION);
+    protected final AddressArray survivor = AddressArray.create(MAX_NUM_REGION);
+    protected final AddressArray old = AddressArray.create(MAX_NUM_REGION);
+    ```
+    There also should be methods for the caller to access ```eden```, ```survivor```, and ```old```. These methods remove elements from ```AddressArray```. (This way avoids the race condition between mutator threads while allocating objects, however it may decrease the utilization of regions which depends on the size of the region.)
     ```java
     public Address getEdenRegion(){}
     public Address getSurvivorRegion(){}
     public Address getOldRegion(){}
     ```
-    A method that retrieves regions from mutator thread should also be defined. Since after a cycle of GC, the regions that held by the mutator thread become unallocated regions, the bump pointer that associates with the region becomues invalid. This method also mutates ```AddressArray```.
+    If there is no avaliable region left in ```eden```, ```survivor```, or ```old```, and```num_current_regions``` does not exceed ```MAX_NUM_REGION```, the getter methods defines previous should call ```expandRegions``` to request virtual memory of size ```REGIONS_SIZE``` and return its address.
     ```java
-    public void returnRegion(Address region){}
+    public Address expandRegions(){}
     ```
-    After each GC, the role of each should be recalculated based on tis liveness and updates ```eden```, ```survivor```, and ```old```.
+    
+    A method that recycles regions from mutator threads should also be defined. Since after a cycle of GC, the regions that held by the mutator thread become unallocated regions, the bump pointer that associates with the region becomues invalid, the mutator threads need to inform the global pool of which regions can be reused. This method also mutates ```eden```, ```survivor```, and ```old```.
+    ```java
+    public void returnRegion(Address region, int Type){}
+    ```
+    After each GC, the role of each should be recalculated based on its liveness, then updates ```eden```, ```survivor```, and ```old```.
     ```java
     public void updateRoles(){}
     ```
-    The method ```traceObject()``` for tracing an object should be defined. In this method, while getting all referenced objects, it also copies and pastes current object to Survivior Space. Pasting is realized by calling ```alloc()``` defined in G1Collector. This method also updates accounting information for updating roles of each region.
+    The method ```traceObject()``` is for tracing an object. In this method, while getting all referenced objects, it also copies and pastes current object to current survivior space. Pasting is realized by calling ```allocCopy()``` defined in G1Collector. This method also updates accounting information for updating roles of each region.
+    We can refer to ```CopySpace.traceObject()``` for the implementation of this method.
     ```java
     public ObjectReference traceObject(ObjectReference obj){}
     ```
@@ -71,7 +83,7 @@ Describe how a range of virtual address space is managed.
     ```java
     public G1SpaceLocal(G1Space space) {this.space=space;}
     ```
-    When the mutator tries to allocate an objects, it first visits every bump pointer in ```bumpPointers```, see if the object can be allocated by any of the bump pointers. If it fails, ```alloc()``` will request a new region from the global pool ```g1.eden```, and assign a bump pointer for the region.
+    When the mutator tries to allocate an object, it first visits every bump pointer in ```bumpPointers```, see if the object can be allocated by any of the bump pointers. If it fails, ```alloc()``` will request a new eden region from the global pool ```g1.eden```, and assign a bump pointer for the region.
     ```java
     public Address alloc(int bytes, int align, int offset){}
     ```
@@ -82,9 +94,19 @@ Interface between Policy and JVM.
 - G1
 
     It creates an instance of G1Space, and defines the activities during GC.
+    In the ```RELEASE``` phase, ```g1.release()``` calls  ```updateRoles()``` to update rolls of each region.
     ```java
-    public static final G1Space g1 = new G1Space("g1", false, VMRequest.discontiguous());
-    public void collectionPhase(short phaseId) {}
+    public static final G1Space g1 = new G1Space("g1", VMRequest.discontiguous());
+    public final Trace g1Trace = new Trace(metaDataSpace);  // live objects tracer
+    public void collectionPhase(short phaseId) {
+        // ...
+        if (phaseId == G1.RELEASE) {
+            g1.release();
+            super.collectionPhase(phaseId);
+            return;
+        }
+        // ...
+    }
     ```
 
 - G1Mutator
@@ -94,15 +116,29 @@ Interface between Policy and JVM.
     protected G1SpaceLocal gl = new G1SpaceLocal(G1.g1space);
     public Address alloc(int bytes, int align, int offset, int allocator){}
     ```
+    At the end of a GC cycle, each mutator thread returns regions back to the gloabl pool. (We have to make sure this happens before the new roles are calculated, so we may reschdule this action to other phase.)
+    ```java
+    public void collectionPhase(short phaseId, boolean primary) {
+        // ...
+        if (phaseId == SS.RELEASE) {
+          super.collectionPhase(phaseId, primary);
+          gl.release();
+          return;
+        }
+        // ...
+    }
+    ```
+    
 
 - G1Collector
 
-    This class difines the activities during a GC. It also provides ```allocCopy()```method for pasting objects during GC.
+    This class difines the activities during a GC. It also provides ```allocCopy()```method for pasting objects during GC. The ```collectionPhase``` here defines the trace behavior in each phase.
     ```java
     protected G1SpaceLocal gl = new G1SpaceLocal(G1.g1space);
     public G1Collector() {this(new G1TraceLocal(global().g1Trace));}
 
     public Address allocCopy(int bytes, int align, int offset, int allocator){}
+    
     public void collectionPhase(short phaseId) {}
     ```
 
