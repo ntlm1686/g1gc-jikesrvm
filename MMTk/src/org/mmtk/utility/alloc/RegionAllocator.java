@@ -22,8 +22,6 @@ public class RegionAllocator extends Allocator {
     /** current contiguous region */
     protected Address region;
     
-    private final int allocationKind;
-
     /** Thread Local Allocation Buffer Size */ 
     private static final int MIN_TLAB_SIZE = 2048;
 
@@ -31,12 +29,10 @@ public class RegionAllocator extends Allocator {
     /** first contiguous region */
     // protected Address initialRegion;
     /** linear scanning is permitted if true */
-    // protected final boolean allowScanning;
 
 
-    protected RegionAllocator(RegionSpace space, int allocationKind, boolean allowScanning) {
+    protected RegionAllocator(RegionSpace space) {
         this.space = space;
-        this.allocationKind = allocationKind;
         reset();
     }
 
@@ -83,7 +79,7 @@ public class RegionAllocator extends Allocator {
         }
         // get a new region
         int maxSize = bytes < MIN_TLAB_SIZE ? MIN_TLAB_SIZE : bytes;
-        Address start = space.getRegion(allocationKind, maxSize);
+        Address start = space.getRegion(maxSize);
         
         if (start.isZero())
         return start; // failed allocation

@@ -6,8 +6,8 @@ import org.vmmagic.pragma.*;
 @Uninterruptible
 public final class G1Local extends RegionAllocator {
 
-    protected G1Local(RegionSpace space, int allocationKind, boolean allowScanning) {
-        super(space, allocationKind, allowScanning);
+    protected G1Local(RegionSpace space) {
+        super(space);
         //TODO Auto-generated constructor stub
     }
 }
