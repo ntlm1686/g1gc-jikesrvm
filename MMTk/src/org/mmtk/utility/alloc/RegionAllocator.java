@@ -21,6 +21,11 @@ public class RegionAllocator extends Allocator {
     private Address limit;
     /** current contiguous region */
     protected Address region;
+    
+    private final int allocationKind;
+
+    /** Thread Local Allocation Buffer Size */ 
+    private static final int MIN_TLAB_SIZE = 2048;
 
     // TODO let the space manage the regions
     /** first contiguous region */
@@ -29,8 +34,9 @@ public class RegionAllocator extends Allocator {
     // protected final boolean allowScanning;
 
 
-    protected RegionAllocator(RegionSpace space, boolean allowScanning) {
+    protected RegionAllocator(RegionSpace space, int allocationKind, boolean allowScanning) {
         this.space = space;
+        this.allocationKind = allocationKind;
         reset();
     }
 
@@ -72,13 +78,18 @@ public class RegionAllocator extends Allocator {
 
     @Override
     protected Address allocSlowOnce(int bytes, int alignment, int offset) {
+        if (!cursor.isZero()) {
+            this.reset();
+        }
         // get a new region
-        Address start = space.getRegion();
+        int maxSize = bytes < MIN_TLAB_SIZE ? MIN_TLAB_SIZE : bytes;
+        Address start = space.getRegion(allocationKind, maxSize);
+        
+        if (start.isZero())
+        return start; // failed allocation
+        
         // assume the region is not contiguous
         cursor = start;
-
-        if (start.isZero())
-            return start; // failed allocation
 
         // update limit
         limit = start.plus(RegionSpace.REGION_SIZE);
