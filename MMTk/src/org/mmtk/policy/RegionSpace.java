@@ -30,17 +30,17 @@ public class RegionSpace extends Space{
         return false;
     }
     
-    public Address getRegion(int size){
-        Address tlab = allocTLABFast(size);
+    public Address getRegion(){
+        Address tlab = allocTLABFast();
         if (!tlab.isZero()) return tlab;
-        return allocTLABSlow(size);
+        return allocTLABSlow();
     }
 
-    public Address allocTLABFast(int size) {
+    public Address allocTLABFast() {
         return Address.zero();
     }
 
-    public Address allocTLABSlow(int size) {
+    public Address allocTLABSlow() {
         return Address.zero();
     }
 }

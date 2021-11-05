@@ -22,9 +22,6 @@ public class RegionAllocator extends Allocator {
     /** current contiguous region */
     protected Address region;
     
-    /** Thread Local Allocation Buffer Size */ 
-    private static final int MIN_TLAB_SIZE = 2048;
-
     // TODO let the space manage the regions
     /** first contiguous region */
     // protected Address initialRegion;
@@ -78,8 +75,7 @@ public class RegionAllocator extends Allocator {
             this.reset();
         }
         // get a new region
-        int maxSize = bytes < MIN_TLAB_SIZE ? MIN_TLAB_SIZE : bytes;
-        Address start = space.getRegion(maxSize);
+        Address start = space.getRegion();
         
         if (start.isZero())
         return start; // failed allocation
