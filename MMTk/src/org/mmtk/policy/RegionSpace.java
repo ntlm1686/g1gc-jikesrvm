@@ -36,7 +36,6 @@ public class RegionSpace extends Space{
         return allocTLABSlow(allocationKind, size);
     }
 
-    @Inline
     public Address allocTLABFast(int allocationKind, int size) {
         return Address.zero();
     }
