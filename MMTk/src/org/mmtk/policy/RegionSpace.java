@@ -6,7 +6,7 @@ import org.vmmagic.unboxed.*;
 
 public class RegionSpace extends Space{
 
-    public static Offset REGION_SIZE = Offset.zero(); // TODO: size
+    public static int REGION_SIZE = 32768; // TODO: size
 
     protected RegionSpace(String name, boolean movable, boolean immortal, boolean zeroed, VMRequest vmRequest) {
         super(name, movable, immortal, zeroed, vmRequest);
@@ -31,4 +31,8 @@ public class RegionSpace extends Space{
         return false;
     }
     
+    public Address getRegion(){
+        // TODO
+        return Address.zero();
+    }
 }

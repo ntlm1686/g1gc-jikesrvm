@@ -1,29 +1,35 @@
 package org.mmtk.utility.alloc;
 
-import org.mmtk.policy.Space;
 import org.mmtk.policy.RegionSpace;
+import org.mmtk.policy.Space;
+import org.mmtk.utility.Conversions;
 import org.vmmagic.pragma.*;
-import org.vmmagic.unboxed.Address;
+import org.vmmagic.unboxed.*;
 
 @Uninterruptible
 public class RegionAllocator extends Allocator {
 
+    // private static final Word BLOCK_MASK = null;
+    
+
+    /** space this bump pointer is associated with */
+    protected RegionSpace space;
+
     /** insertion point */
     protected Address cursor;
-    /** current internal slow-path sentinel for bump pointer */
-    private Address internalLimit;
-    /** current external slow-path sentinel for bump pointer */
+    /** current sentinel for bump pointer */
     private Address limit;
-    /** space this bump pointer is associated with */
-    protected Space space;
-    /** first contiguous region */
-    protected Address initialRegion;
-    /** linear scanning is permitted if true */
-    // protected final boolean allowScanning;
     /** current contiguous region */
     protected Address region;
 
-    protected RegionAllocator(Space space, boolean allowScanning) {
+    // TODO let the space manage the regions
+    /** first contiguous region */
+    // protected Address initialRegion;
+    /** linear scanning is permitted if true */
+    // protected final boolean allowScanning;
+
+
+    protected RegionAllocator(RegionSpace space, boolean allowScanning) {
         this.space = space;
         reset();
     }
@@ -35,15 +41,12 @@ public class RegionAllocator extends Allocator {
     public final void reset() {
         cursor = Address.zero();
         limit = Address.zero();
-        internalLimit = Address.zero();
-        initialRegion = Address.zero();
         region = Address.zero();
     }
 
     @Override
     protected Space getSpace() {
-        // TODO Auto-generated method stub
-        return null;
+        return space;
     }
 
     @Inline
@@ -53,28 +56,33 @@ public class RegionAllocator extends Allocator {
 
         // can this object fit in the current region?
         if (end.GT(limit))
-            return allocSlowInline(bytes, align, offset);
+            return allocSlow(start, end, align, offset);
 
         fillAlignmentGap(cursor, start);
         cursor = end;
 
-        // record the allocation
-        // Region.setCursor(currentRegion, cursor);
+        // TODO record the allocation
+        // space.setCursor(currentRegion, cursor);
         return start;
+    }
+
+    private Address allocSlow(Address start, Address end, int align, int offset) {
+        return allocSlowInline(end.diff(start).toInt(), align, offset);
     }
 
     @Override
     protected Address allocSlowOnce(int bytes, int alignment, int offset) {
-        region = Address.zero(); // require a new region from space
+        // get a new region
+        Address start = space.getRegion();
+        // assume the region is not contiguous
+        cursor = start;
 
-        if (region.isZero()) {
-            // space has no more region
-            return region;
-        }
+        if (start.isZero())
+            return start; // failed allocation
 
-        cursor = region;
-        limit = region.plus(RegionSpace.REGION_SIZE);
+        // update limit
+        limit = start.plus(RegionSpace.REGION_SIZE);
+
         return alloc(bytes, alignment, offset);
     }
-
 }
