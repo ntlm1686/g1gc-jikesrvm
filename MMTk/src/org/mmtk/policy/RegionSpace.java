@@ -3,7 +3,6 @@ package org.mmtk.policy;
 import org.mmtk.plan.TransitiveClosure;
 import org.mmtk.utility.heap.VMRequest;
 import org.vmmagic.unboxed.*;
-import org.vmmagic.pragma.*;
 public class RegionSpace extends Space{
 
     public static int REGION_SIZE = 32768; // TODO: size
@@ -38,11 +37,11 @@ public class RegionSpace extends Space{
     }
 
     @Inline
-    public Address allocTLABFast(int allocationKind, int tlabSize) {
+    public Address allocTLABFast(int allocationKind, int size) {
         return Address.zero();
     }
 
-    public Address allocTLABSlow(int allocationKind, int tlabSize) {
+    public Address allocTLABSlow(int allocationKind, int size) {
         return Address.zero();
     }
 }
