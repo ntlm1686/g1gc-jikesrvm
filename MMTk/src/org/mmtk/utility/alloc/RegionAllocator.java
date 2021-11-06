@@ -21,15 +21,14 @@ public class RegionAllocator extends Allocator {
     private Address limit;
     /** current contiguous region */
     protected Address region;
-
+    
     // TODO let the space manage the regions
     /** first contiguous region */
     // protected Address initialRegion;
     /** linear scanning is permitted if true */
-    // protected final boolean allowScanning;
 
 
-    protected RegionAllocator(RegionSpace space, boolean allowScanning) {
+    protected RegionAllocator(RegionSpace space) {
         this.space = space;
         reset();
     }
@@ -72,13 +71,17 @@ public class RegionAllocator extends Allocator {
 
     @Override
     protected Address allocSlowOnce(int bytes, int alignment, int offset) {
+        if (!cursor.isZero()) {
+            this.reset();
+        }
         // get a new region
         Address start = space.getRegion();
-        // assume the region is not contiguous
-        cursor = start;
 
         if (start.isZero())
             return start; // failed allocation
+        
+        // assume the region is not contiguous
+        cursor = start;
 
         // update limit
         limit = start.plus(RegionSpace.REGION_SIZE);
