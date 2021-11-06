@@ -2,7 +2,7 @@ package org.mmtk.utility.alloc;
 
 import org.mmtk.policy.RegionSpace;
 import org.mmtk.policy.Space;
-import org.mmtk.utility.Conversions;
+import org.mmtk.utility.*;
 import org.vmmagic.pragma.*;
 import org.vmmagic.unboxed.*;
 
