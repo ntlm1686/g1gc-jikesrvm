@@ -76,9 +76,9 @@ public class RegionAllocator extends Allocator {
         }
         // get a new region
         Address start = space.getRegion();
-        
+
         if (start.isZero())
-        return start; // failed allocation
+            return start; // failed allocation
         
         // assume the region is not contiguous
         cursor = start;
