@@ -3,7 +3,11 @@ package org.mmtk.policy;
 import static org.mmtk.utility.Constants.*;
 
 import org.mmtk.plan.TransitiveClosure;
+import org.mmtk.utility.ForwardingWord;
+import org.mmtk.utility.*;
 import org.mmtk.utility.heap.*;
+import org.mmtk.utility.options.Options;
+import org.mmtk.vm.VM;
 import org.vmmagic.pragma.Inline;
 import org.vmmagic.unboxed.*;
 
@@ -17,7 +21,7 @@ public class RegionSpace extends Space {
         this(name, true, vmRequest);
     }
 
-    protected RegionSpace(String name, boolean zeroed, VMRequest vmRequest) {
+    public RegionSpace(String name, boolean zeroed, VMRequest vmRequest) {
         super(name, true, false, zeroed, vmRequest);
         if (vmRequest.isDiscontiguous()) {
             pr = new MonotonePageResource(this, META_DATA_PAGES_PER_REGION);
@@ -27,10 +31,13 @@ public class RegionSpace extends Space {
         // TODO Auto-generated constructor stub
     }
 
+    /**
+     * Release allocated pages.
+     */
     @Override
+    @Inline
     public void release(Address start) {
-        // TODO Auto-generated method stub
-
+        ((FreeListPageResource) pr).releasePages(start);
     }
 
     @Override
@@ -64,9 +71,11 @@ public class RegionSpace extends Space {
 
     @Inline
     public ObjectReference traceObject(TransitiveClosure trace, ObjectReference object, int allocator) {
-        // TODO
+        // we use mark bit here
 
-        return object;
+
+        ObjectReference newObject = VM.objectModel.copy(object, allocator);
+        return newObject;
     }
 
 }
