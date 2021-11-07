@@ -2,6 +2,9 @@ package org.mmtk.policy;
 
 import static org.mmtk.utility.Constants.*;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.mmtk.plan.TransitiveClosure;
 import org.mmtk.utility.ForwardingWord;
 import org.mmtk.utility.*;
@@ -17,6 +20,14 @@ public class RegionSpace extends Space {
     private static final int META_DATA_PAGES_PER_REGION = 0;
     public static final int PAGES_PER_REGION = 256;
     public static final int REGION_SIZE = 32768; // TODO: size
+    public static final int REGION_NUMBER = 1000;
+
+    protected final AddressArray regionTable = AddressArray.create(REGION_NUMBER);
+    protected final AddressArray availableRegion = AddressArray.create(REGION_NUMBER);
+    protected final AddressArray consumedRegion = AddressArray.create(REGION_NUMBER);
+
+    // Before we implement the metadata, we use a map instead
+    protected final Map<Address, Integer> regionLiveBytes = new HashMap<Address, Integer>();
 
     public RegionSpace(String name, VMRequest vmRequest) {
         this(name, true, vmRequest);
@@ -29,7 +40,9 @@ public class RegionSpace extends Space {
         } else {
             pr = new MonotonePageResource(this, start, extent, META_DATA_PAGES_PER_REGION);
         }
-        // TODO Auto-generated constructor stub
+
+        this.initializeRegions();
+        this.resetRegionLiveBytes();
     }
 
     /**
@@ -59,8 +72,30 @@ public class RegionSpace extends Space {
      * @return
      */
     public Address getRegion() {
+
         // TODO initialize the region, maybe record this region
         return this.acquire(PAGES_PER_REGION);
+    }
+
+    /**
+     * Add a new region to this space.
+     */
+    private Address addRegion() {
+        Address newRegion = this.acquire(PAGES_PER_REGION);
+
+        return newRegion;
+    }
+
+    /**
+     * Initialize the regions.
+     */
+    private void initializeRegions() {
+        for (int i = 0; i < REGION_NUMBER; i++) {
+            Address region = addRegion();
+            regionTable.set(i, region);
+            availableRegion.set(i, region);
+            consumedRegion.set(i, Address.zero());
+        }
     }
 
     /**
@@ -71,7 +106,10 @@ public class RegionSpace extends Space {
      */
     @Inline
     public Address regionOf(ObjectReference object) {
-        // TODO
+        // TODO Maybe use binary search to find the region of this object
+        Address addr = object.toAddress();
+        // region address array
+
         return Address.zero();
     }
 
@@ -87,11 +125,23 @@ public class RegionSpace extends Space {
     public ObjectReference traceObject(TransitiveClosure trace, ObjectReference object, int allocator) {
         if (testAndMark(object)) {
             Address region = regionOf(object);
-            // update region alive bytes size
+            updateRegionliveBytes(region, object);
             trace.processNode(object);
         }
-
         return object;
+    }
+
+
+    /**
+     * Update the collection set, based on the region liveness.
+     * 
+     * @param trace
+     * @param object
+     * @param allocator
+     * @return
+     */
+    public void updateCollectionSet() {
+        // TODO
     }
 
     /**
@@ -140,15 +190,38 @@ public class RegionSpace extends Space {
     }
 
     /**
-     * TODO need a bit in the region metadata to indicate whether the region is in
-     * the collect
+     * Look into the region's flag bits.
+     * collection set
+     * 
+     * (this can be implemented in RegionAllocator)
      * 
      * @param regionOf
      * @return
      */
     @Inline
     private boolean relocationRequired(Address region) {
+        // TODO
 
         return false;
+    }
+
+    @Inline
+    private void resetRegionLiveBytes() {
+        // assert regionTable has been initialized
+        for (int i = 0; i < REGION_NUMBER; i++) {
+            regionLiveBytes.put(regionTable.get(i), 0);
+        }
+    }
+
+    @Inline
+    private void updateRegionliveBytes(Address region, int liveBytes) {
+        regionLiveBytes.put(region, liveBytes);
+    }
+
+    @Inline
+    private void updateRegionliveBytes(Address region, ObjectReference object) {
+        int liveBytes = 0;
+        // liveBytes = sizeOf(object);
+        regionLiveBytes.put(region, liveBytes);
     }
 }

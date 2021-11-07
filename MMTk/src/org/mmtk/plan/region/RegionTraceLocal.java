@@ -39,8 +39,14 @@ public final class RegionTraceLocal extends TraceLocal {
   public void completeTrace() {
     // Marking live objects
     super.completeTrace();
-    // Perform scanning on collecting set(regions)
-    // Region.regionSpace.evacuate();
+
+    // 1. update collection set
+    Region.regionSpace.updateCollectionSet();
+
+    // 2. perform scanning on collecting set(regions)
+    // region.regionSpace.evacuate();
+
+
   }
 
   /****************************************************************************

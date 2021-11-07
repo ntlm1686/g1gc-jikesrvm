@@ -15,10 +15,12 @@ package org.mmtk.plan.region;
 import org.mmtk.plan.*;
 import org.mmtk.policy.ImmortalSpace;
 import org.mmtk.policy.RegionSpace;
+import org.mmtk.utility.Conversions;
 import org.mmtk.utility.heap.VMRequest;
 import org.mmtk.vm.VM;
 
 import org.vmmagic.pragma.*;
+import org.vmmagic.unboxed.Extent;
 
 
 /**
@@ -27,6 +29,10 @@ import org.vmmagic.pragma.*;
  */
 @Uninterruptible
 public class Region extends StopTheWorld {
+
+
+  private static final int NET_META_DATA_BYTES_PER_REGION = 0;
+  protected static final int META_DATA_PAGES_PER_REGION_WITH_BITMAP = Conversions.bytesToPages(Extent.fromIntSignExtend(NET_META_DATA_BYTES_PER_REGION));
 
   /*****************************************************************************
    * Class variables
