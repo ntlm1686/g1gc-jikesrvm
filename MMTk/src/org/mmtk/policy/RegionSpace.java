@@ -138,6 +138,23 @@ public class RegionSpace extends Space {
             availableRegion.set(i, region);
             consumedRegion.set(i, Address.zero());
         }
+        Address[] regionTableCopy = regionTable.getAll();
+        Arrays.sort(regionTableCopy, (X, Y) -> {
+            return X.toInt() - Y.toInt();
+        });
+        regionTable.setAll(regionTableCopy);
+    }
+
+    @Inline
+    private boolean isRegionIdeal(Address X, Address Y) {
+        return (X.toInt() < Y.toInt()) && (X.toInt() + REGION_SIZE >= Y.toInt());
+    }
+
+    @Inline
+    private Address idealRegion(Address[] table, Address address) {
+        for (Address region : table)
+            if(isRegionIdeal(region, address))
+                return region;
     }
 
     /**
@@ -148,11 +165,8 @@ public class RegionSpace extends Space {
      */
     @Inline
     public Address regionOf(ObjectReference object) {
-        // TODO Maybe use binary search to find the region of this object
-        Address addr = object.toAddress();
-        // region address array
-
-        return Address.zero();
+        Address address = object.toAddress();
+        return idealRegion(regionTable.getAll(), address);
     }
 
     /**
