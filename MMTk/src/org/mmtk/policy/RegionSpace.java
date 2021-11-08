@@ -140,10 +140,10 @@ public class RegionSpace extends Space {
             consumedRegion.set(i, Address.zero());
         }
         Address[] regionTableCopy = regionTable.getAll();
-        Arrays.sort(regionTableCopy, new Comparator<Address[]>() {
+        Arrays.sort(regionTableCopy, new Comparator<Address>() {
             @Override
-            public int compare(Address[] o1, Address[] o2) {
-                return ((Integer) o2[0].toInt()).compareTo(o1[0].toInt());
+            public int compare(Address o1, Addresso2) {
+                return (Integer.parseInt(o2.toInt())).compareTo(Integer.parseInt(o1.toInt()));
             }
         });
         regionTable.setAll(regionTableCopy);
