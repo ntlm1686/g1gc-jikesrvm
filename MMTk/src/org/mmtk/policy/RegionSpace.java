@@ -139,9 +139,7 @@ public class RegionSpace extends Space {
             consumedRegion.set(i, Address.zero());
         }
         Address[] regionTableCopy = regionTable.getAll();
-        Arrays.sort(regionTableCopy, (X, Y) -> {
-            return X.toInt() - Y.toInt();
-        });
+        Arrays.sort(regionTableCopy, Comparator.comparingInt(Address::toInt));
         regionTable.setAll(regionTableCopy);
     }
 
