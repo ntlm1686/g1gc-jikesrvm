@@ -2,7 +2,8 @@ package org.mmtk.policy;
 
 import java.util.HashMap;
 import java.util.Map;
-
+import java.util.Arrays;
+import java.util.Comparator;
 import org.mmtk.plan.TransitiveClosure;
 import org.mmtk.utility.ForwardingWord;
 import org.mmtk.utility.*;
@@ -139,7 +140,7 @@ public class RegionSpace extends Space {
             consumedRegion.set(i, Address.zero());
         }
         Address[] regionTableCopy = regionTable.getAll();
-        Arrays.sort(twoDim, new Comparator<Address[]>() {
+        Arrays.sort(regionTableCopy, new Comparator<Address[]>() {
             @Override
             public int compare(Address[] o1, Address[] o2) {
                 return ((Integer) o2[0].toInt()).compareTo(o1[0].toInt());
