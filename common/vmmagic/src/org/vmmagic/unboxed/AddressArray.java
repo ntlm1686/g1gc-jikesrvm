@@ -30,10 +30,9 @@ public final class AddressArray {
   }
 
   public Address[] getAll() {
-    return data;
+    return null;
   }
 
   public void setAll(Address[] data) {
-    this.data = data;
   }
 }
