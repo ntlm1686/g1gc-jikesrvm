@@ -143,7 +143,7 @@ public class RegionSpace extends Space {
         Arrays.sort(regionTableCopy, new Comparator<Address>() {
             @Override
             public int compare(Address o1, Address o2) {
-                return (Integer.parseInt(o2.toInt())).compareTo(Integer.parseInt(o1.toInt()));
+                return o1.toInt() - o2.toInt();
             }
         });
         regionTable.setAll(regionTableCopy);
