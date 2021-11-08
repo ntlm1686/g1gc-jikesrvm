@@ -155,6 +155,23 @@ public class RegionSpace extends Space {
         return (X.toInt() < Y.toInt()) && (X.toInt() + REGION_SIZE >= Y.toInt());
     }
 
+    @Inline
+    private Address binarySearch(Address[] array, Address key) {
+        int left = 0;
+        int right = array.length - 1;
+        while (left <= right) {
+            int mid = (left + right) >>> 1;
+            if (isRegionIdeal(array[mid], key)) {
+                return array[mid];
+            } if (array[mid].toInt() > key.toInt()) {
+                right = mid - 1;
+            } else if (array[mid].toInt() + REGION_SIZE < key.toInt()) {
+                left = mid + 1;
+            }
+        }
+        return Address.zero();
+    }
+
     /**
      * Return the region this object belongs to.
      * 
