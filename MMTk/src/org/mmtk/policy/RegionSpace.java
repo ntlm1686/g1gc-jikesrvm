@@ -159,6 +159,7 @@ public class RegionSpace extends Space {
         for (Address region : table)
             if(isRegionIdeal(region, address))
                 return region;
+        return address;
     }
 
     /**
