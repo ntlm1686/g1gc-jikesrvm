@@ -1,7 +1,5 @@
 package org.mmtk.policy;
 
-import static org.mmtk.utility.Constants.*;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -9,12 +7,29 @@ import org.mmtk.plan.TransitiveClosure;
 import org.mmtk.utility.ForwardingWord;
 import org.mmtk.utility.*;
 import org.mmtk.utility.heap.*;
-import org.mmtk.utility.options.Options;
+import org.mmtk.vm.Lock;
 import org.mmtk.vm.VM;
 import org.vmmagic.pragma.Inline;
 import org.vmmagic.unboxed.*;
 
 public class RegionSpace extends Space {
+
+    public static final boolean HEADER_MARK_BITS = VM.config.HEADER_MARK_BITS;
+    /** highest bit bits we may use */
+    private static final int AVAILABLE_LOCAL_BITS = 8 - HeaderByte.USED_GLOBAL_BITS;
+
+    private static final int COUNT_BASE = 0;
+
+    /** Mark bits */
+    public static final int DEFAULT_MARKCOUNT_BITS = 4;
+    public static final int MAX_MARKCOUNT_BITS = AVAILABLE_LOCAL_BITS - COUNT_BASE;
+    private static final byte MARK_COUNT_INCREMENT = (byte) (1 << COUNT_BASE);
+    private static final byte MARK_COUNT_MASK = (byte) (((1 << MAX_MARKCOUNT_BITS) - 1) << COUNT_BASE); // minus 1 for
+                                                                                                        // copy/alloc
+
+    private byte markState = 1;
+    private byte allocState = 0;
+    private boolean isAllocAsMarked = false;
 
     // TODO
     private static final int META_DATA_PAGES_PER_REGION = 0;
@@ -22,12 +37,20 @@ public class RegionSpace extends Space {
     public static final int REGION_SIZE = 32768; // TODO: size
     public static final int REGION_NUMBER = 1000;
 
+    protected final Lock lock = VM.newLock("RegionSpaceGloabl");
+    // TODO replace with shared queue?
     protected final AddressArray regionTable = AddressArray.create(REGION_NUMBER);
     protected final AddressArray availableRegion = AddressArray.create(REGION_NUMBER);
+
+    // deprecated
     protected final AddressArray consumedRegion = AddressArray.create(REGION_NUMBER);
+
+    int availableRegionCount = 0;
+    int consumedRegionCount = 0;
 
     // Before we implement the metadata, we use a map instead
     protected final Map<Address, Integer> regionLiveBytes = new HashMap<Address, Integer>();
+    protected final Map<Address, Boolean> requireRelocation = new HashMap<Address, Boolean>();
 
     public RegionSpace(String name, VMRequest vmRequest) {
         this(name, true, vmRequest);
@@ -43,6 +66,7 @@ public class RegionSpace extends Space {
 
         this.initializeRegions();
         this.resetRegionLiveBytes();
+        this.resetRequireRelocation();
     }
 
     /**
@@ -55,15 +79,22 @@ public class RegionSpace extends Space {
     }
 
     @Override
+    @Inline
     public ObjectReference traceObject(TransitiveClosure trace, ObjectReference object) {
         VM.assertions.fail("CopySpace.traceLocal called without allocator");
         return ObjectReference.nullReference();
     }
 
     @Override
+    @Inline
     public boolean isLive(ObjectReference object) {
-        // TODO Auto-generated method stub
-        return false;
+        return testMarkState(object);
+    }
+
+    /**
+     * Prepare for the next GC.
+     */
+    public void prepare() {
     }
 
     /**
@@ -71,24 +102,35 @@ public class RegionSpace extends Space {
      * 
      * @return
      */
+    @Inline
     public Address getRegion() {
-
-        // TODO initialize the region, maybe record this region
-        return this.acquire(PAGES_PER_REGION);
+        lock.acquire();
+        if (availableRegionCount == 0) {
+            // No available region
+            lock.release();
+            return Address.zero();
+        }
+        Address newRegion = availableRegion.get(availableRegionCount);
+        availableRegionCount--;
+        consumedRegionCount++;
+        consumedRegion.set(consumedRegionCount, newRegion);
+        lock.release();
+        return newRegion;
     }
 
     /**
      * Add a new region to this space.
      */
+    @Inline
     private Address addRegion() {
         Address newRegion = this.acquire(PAGES_PER_REGION);
-
         return newRegion;
     }
 
     /**
      * Initialize the regions.
      */
+    @Inline
     private void initializeRegions() {
         for (int i = 0; i < REGION_NUMBER; i++) {
             Address region = addRegion();
@@ -131,6 +173,28 @@ public class RegionSpace extends Space {
         return object;
     }
 
+    /**
+     * Perform any required post allocation initialization
+     *
+     * @param object the object ref to the storage to be initialized
+     */
+    @Inline
+    public void postAlloc(ObjectReference object) {
+        initializeHeader(object, true);
+    }
+
+    /**
+     * Perform any required post copy (i.e. in-GC allocation) initialization. This
+     * is relevant (for example) when MS is used as the mature space in a copying
+     * GC.
+     *
+     * @param object  the object ref to the storage to be initialized
+     * @param majorGC Is this copy happening during a major gc?
+     */
+    @Inline
+    public void postCopy(ObjectReference object, boolean majorGC) {
+        initializeHeader(object, false);
+    }
 
     /**
      * Update the collection set, based on the region liveness.
@@ -140,8 +204,19 @@ public class RegionSpace extends Space {
      * @param allocator
      * @return
      */
+    @Inline
     public void updateCollectionSet() {
         // TODO
+    }
+
+    /**
+     * Evacuate a region using linear scan.
+     * 
+     * @param region
+     */
+    @Inline
+    public void evacuateRegion(Address region) {
+        // linear scan a region
     }
 
     /**
@@ -163,10 +238,24 @@ public class RegionSpace extends Space {
                 // no processNode since it's been pushed by other thread
                 return ForwardingWord.extractForwardingPointer(forwardingWord);
             } else {
+                assert (regionLiveBytes.get(regionOf(object)) != 0);
+
                 // object is not being forwarded, copy it
                 ObjectReference newObject = VM.objectModel.copy(object, allocator);
                 ForwardingWord.setForwardingPointer(object, newObject);
                 trace.processNode(newObject);
+
+                // TODO lock
+                int newLiveBytes = regionLiveBytes.get(regionOf(object)) - sizeOf(object);
+                regionLiveBytes.put(regionOf(object), newLiveBytes);
+                if (newLiveBytes == 0) {
+                    // if new live bytes is 0, the region is empty, it's available again
+                    lock.acquire();
+                    availableRegionCount++;
+                    availableRegion.set(availableRegionCount, regionOf(object));
+                    lock.release();
+                }
+
                 return newObject;
             }
         } else {
@@ -179,32 +268,73 @@ public class RegionSpace extends Space {
     }
 
     /**
-     * test and set the live bit for this object in its region's metadata
+     * Atomically attempt to set the mark bit of an object.
      * 
      * @param object
      * @return true if sucessfully set, false if already set
      */
     @Inline
     private boolean testAndMark(ObjectReference object) {
-        return false;
+        byte oldValue, markBits, newValue;
+        oldValue = VM.objectModel.readAvailableByte(object);
+        markBits = (byte) (oldValue & MARK_COUNT_MASK);
+        if (markBits == markState)
+            return false;
+        newValue = (byte) ((oldValue & ~MARK_COUNT_MASK) | markState);
+        if (HeaderByte.NEEDS_UNLOGGED_BIT)
+            newValue |= HeaderByte.UNLOGGED_BIT;
+        VM.objectModel.writeAvailableByte(object, newValue);
+        return true;
     }
 
     /**
-     * Look into the region's flag bits.
-     * collection set
+     * Perform any required initialization of the GC portion of the header.
+     *
+     * @param object the object ref to the storage to be initialized
+     * @param alloc  is this initialization occuring due to (initial) allocation
+     *               (true) or due to copying (false)?
+     */
+    @Inline
+    public void initializeHeader(ObjectReference object, boolean alloc) {
+        byte oldValue = VM.objectModel.readAvailableByte(object);
+        byte newValue = (byte) ((oldValue & ~MARK_COUNT_MASK) | (alloc && !isAllocAsMarked ? allocState : markState));
+        VM.objectModel.writeAvailableByte(object, newValue);
+    }
+
+    /**
+     * Check the mark bit of an object.
+     * 
+     * @param object
+     * @return true if marked, false if not
+     */
+    @Inline
+    private boolean testMarkState(ObjectReference object) {
+        if (VM.VERIFY_ASSERTIONS)
+            VM.assertions._assert((markState & ~MARK_COUNT_MASK) == 0);
+        return (VM.objectModel.readAvailableByte(object) & MARK_COUNT_MASK) == markState;
+    }
+
+    /**
+     * Look into the region's flag bits. collection set
      * 
      * (this can be implemented in RegionAllocator)
      * 
-     * @param regionOf
+     * @param region
      * @return
      */
     @Inline
     private boolean relocationRequired(Address region) {
-        // TODO
-
-        return false;
+        return relocationRequired(region);
     }
 
+    @Inline
+    private boolean relocationRequired(ObjectReference object) {
+        return relocationRequired(regionOf(object));
+    }
+
+    /**
+     * Set all regions' live bytes to 0.
+     */
     @Inline
     private void resetRegionLiveBytes() {
         // assert regionTable has been initialized
@@ -213,15 +343,38 @@ public class RegionSpace extends Space {
         }
     }
 
+    /**
+     * All regions do not require relocation.
+     */
     @Inline
-    private void updateRegionliveBytes(Address region, int liveBytes) {
-        regionLiveBytes.put(region, liveBytes);
+    private void resetRequireRelocation() {
+        // assert regionTable has been initialized
+        for (int i = 0; i < REGION_NUMBER; i++) {
+            requireRelocation.put(regionTable.get(i), false);
+        }
     }
 
+    /**
+     * Update the live bytes of a region by adding the size of the object.
+     * 
+     * @param region
+     * @param object
+     */
     @Inline
     private void updateRegionliveBytes(Address region, ObjectReference object) {
-        int liveBytes = 0;
-        // liveBytes = sizeOf(object);
-        regionLiveBytes.put(region, liveBytes);
+        // update the region's live bytes
+        regionLiveBytes.put(region, sizeOf(object) + regionLiveBytes.get(region));
+    }
+
+    /**
+     * Return the size of an object.
+     */
+    @Inline
+    private int sizeOf(ObjectReference object) {
+        Address objectStart = object.toAddress();
+        Address objectEnd = VM.objectModel.getObjectEndAddress(object);
+        Offset size = objectStart.diff(objectEnd);
+        int liveBytes = size.toInt();
+        return liveBytes;
     }
 }
