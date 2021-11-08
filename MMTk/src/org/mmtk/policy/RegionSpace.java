@@ -129,6 +129,17 @@ public class RegionSpace extends Space {
         return newRegion;
     }
 
+    private void sortTable() {
+        Address[] buffer = regionTable.getAll();
+        Arrays.sort(buffer, new Comparator<Address>() {
+            @Override
+            public int compare(Address X, Address Y) {
+                return X.toInt() - Y.toInt();
+            }
+        });
+        regionTable.setAll(buffer);
+    }
+
     /**
      * Initialize the regions.
      */
@@ -140,32 +151,22 @@ public class RegionSpace extends Space {
             availableRegion.set(i, region);
             consumedRegion.set(i, Address.zero());
         }
-        Address[] regionTableCopy = regionTable.getAll();
-        Arrays.sort(regionTableCopy, new Comparator<Address>() {
-            @Override
-            public int compare(Address o1, Address o2) {
-                return o1.toInt() - o2.toInt();
-            }
-        });
-        regionTable.setAll(regionTableCopy);
+        this.sortTable();
     }
 
-    @Inline
     private boolean isRegionIdeal(Address X, Address Y) {
         return (X.toInt() < Y.toInt()) && (X.toInt() + REGION_SIZE >= Y.toInt());
     }
 
-    @Inline
-    private Address binarySearch(Address[] array, Address key) {
-        int left = 0;
-        int right = array.length - 1;
+    private Address idealRegion(Address[] table, Address address) {
+        int left, right = table.length - 1;
         while (left <= right) {
             int mid = (left + right) >>> 1;
-            if (isRegionIdeal(array[mid], key)) {
-                return array[mid];
-            } if (array[mid].toInt() > key.toInt()) {
+            if (this.isRegionIdeal(table[mid], address)) {
+                return table[mid];
+            } if (table[mid].toInt() > address.toInt()) {
                 right = mid - 1;
-            } else if (array[mid].toInt() + REGION_SIZE < key.toInt()) {
+            } else if (table[mid].toInt() + REGION_SIZE < address.toInt()) {
                 left = mid + 1;
             }
         }
@@ -181,10 +182,7 @@ public class RegionSpace extends Space {
     @Inline
     public Address regionOf(ObjectReference object) {
         Address address = object.toAddress();
-        for (Address region : regionTable.getAll())
-            if (isRegionIdeal(region, address))
-                return region;
-        return Address.zero();
+        return this.idealRegion(regionTable.getAll(), address);
     }
 
     /**
