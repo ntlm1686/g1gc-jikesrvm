@@ -39,12 +39,4 @@ public final class AddressArray {
   public int length() {
     return data.length;
   }
-
-  public Address[] getAll() {
-    return data;
-  }
-
-  public void setAll(Address[] data) {
-    this.data = data;
-  }
 }

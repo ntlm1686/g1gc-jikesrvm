@@ -28,4 +28,12 @@ public final class AddressArray {
   public int length() {
     return 0;
   }
+
+  public Address[] getAll() {
+    return data;
+  }
+
+  public void setAll(Address[] data) {
+    this.data = data;
+  }
 }
