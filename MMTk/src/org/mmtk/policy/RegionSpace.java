@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Arrays;
 import java.util.Comparator;
+
 import org.mmtk.plan.TransitiveClosure;
 import org.mmtk.utility.ForwardingWord;
 import org.mmtk.utility.*;
@@ -154,14 +155,6 @@ public class RegionSpace extends Space {
         return (X.toInt() < Y.toInt()) && (X.toInt() + REGION_SIZE >= Y.toInt());
     }
 
-    @Inline
-    private Address idealRegion(Address[] table, Address address) {
-        for (Address region : table)
-            if(isRegionIdeal(region, address))
-                return region;
-        return address;
-    }
-
     /**
      * Return the region this object belongs to.
      * 
@@ -171,7 +164,10 @@ public class RegionSpace extends Space {
     @Inline
     public Address regionOf(ObjectReference object) {
         Address address = object.toAddress();
-        return idealRegion(regionTable.getAll(), address);
+        for (Address region : regionTable.getAll())
+            if (isRegionIdeal(region, address))
+                return region;
+        return Address.zero();
     }
 
     /**
