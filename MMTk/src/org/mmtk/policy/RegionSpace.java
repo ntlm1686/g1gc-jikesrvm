@@ -2,6 +2,8 @@ package org.mmtk.policy;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Arrays;
+import java.util.Comparator;
 
 import org.mmtk.plan.TransitiveClosure;
 import org.mmtk.utility.ForwardingWord;
@@ -127,6 +129,17 @@ public class RegionSpace extends Space {
         return newRegion;
     }
 
+    private void sortTable() {
+        Address[] buffer = regionTable.getAll();
+        Arrays.sort(buffer, new Comparator<Address>() {
+            @Override
+            public int compare(Address X, Address Y) {
+                return X.toInt() - Y.toInt();
+            }
+        });
+        regionTable.setAll(buffer);
+    }
+
     /**
      * Initialize the regions.
      */
@@ -138,6 +151,26 @@ public class RegionSpace extends Space {
             availableRegion.set(i, region);
             consumedRegion.set(i, Address.zero());
         }
+        this.sortTable();
+    }
+
+    private boolean isRegionIdeal(Address X, Address Y) {
+        return (X.toInt() < Y.toInt()) && (X.toInt() + REGION_SIZE >= Y.toInt());
+    }
+
+    private Address idealRegion(Address[] table, Address address) {
+        int left, right = table.length - 1;
+        while (left <= right) {
+            int mid = (left + right) >>> 1;
+            if (this.isRegionIdeal(table[mid], address)) {
+                return table[mid];
+            } if (table[mid].toInt() > address.toInt()) {
+                right = mid - 1;
+            } else if (table[mid].toInt() + REGION_SIZE < address.toInt()) {
+                left = mid + 1;
+            }
+        }
+        return Address.zero();
     }
 
     /**
@@ -148,11 +181,8 @@ public class RegionSpace extends Space {
      */
     @Inline
     public Address regionOf(ObjectReference object) {
-        // TODO Maybe use binary search to find the region of this object
-        Address addr = object.toAddress();
-        // region address array
-
-        return Address.zero();
+        Address address = object.toAddress();
+        return this.idealRegion(regionTable.getAll(), address);
     }
 
     /**
