@@ -238,7 +238,8 @@ public class RegionSpace extends Space {
                 // no processNode since it's been pushed by other thread
                 return ForwardingWord.extractForwardingPointer(forwardingWord);
             } else {
-                assert (regionLiveBytes.get(regionOf(object)) != 0);
+                if (VM.VERIFY_ASSERTIONS)
+                    VM.assertions._assert(regionLiveBytes.get(regionOf(object)) != 0);
 
                 // object is not being forwarded, copy it
                 ObjectReference newObject = VM.objectModel.copy(object, allocator);
