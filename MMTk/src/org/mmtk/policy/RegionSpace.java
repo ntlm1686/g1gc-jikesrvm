@@ -17,17 +17,21 @@ import org.vmmagic.unboxed.*;
 public class RegionSpace extends Space {
 
     public static final boolean HEADER_MARK_BITS = VM.config.HEADER_MARK_BITS;
-    /** highest bit bits we may use */
+    /**
+     * highest bit bits we may use
+     */
     private static final int AVAILABLE_LOCAL_BITS = 8 - HeaderByte.USED_GLOBAL_BITS;
 
     private static final int COUNT_BASE = 0;
 
-    /** Mark bits */
+    /**
+     * Mark bits
+     */
     public static final int DEFAULT_MARKCOUNT_BITS = 4;
     public static final int MAX_MARKCOUNT_BITS = AVAILABLE_LOCAL_BITS - COUNT_BASE;
     private static final byte MARK_COUNT_INCREMENT = (byte) (1 << COUNT_BASE);
     private static final byte MARK_COUNT_MASK = (byte) (((1 << MAX_MARKCOUNT_BITS) - 1) << COUNT_BASE); // minus 1 for
-                                                                                                        // copy/alloc
+    // copy/alloc
 
     private byte markState = 1;
     private byte allocState = 0;
@@ -52,6 +56,10 @@ public class RegionSpace extends Space {
 
     // Before we implement the metadata, we use a map instead
     protected final Map<Address, Integer> regionLiveBytes = new HashMap<Address, Integer>();
+
+    // Regions on which garbage collector will be executed
+    List<Address> regionToPerformGc = new ArrayList<>();
+
     protected final Map<Address, Boolean> requireRelocation = new HashMap<Address, Boolean>();
 
     public RegionSpace(String name, VMRequest vmRequest) {
@@ -101,7 +109,7 @@ public class RegionSpace extends Space {
 
     /**
      * Return a new region to the allocator.
-     * 
+     *
      * @return
      */
     @Inline
@@ -164,7 +172,8 @@ public class RegionSpace extends Space {
             int mid = (left + right) >>> 1;
             if (this.isRegionIdeal(table[mid], address)) {
                 return table[mid];
-            } if (table[mid].toInt() > address.toInt()) {
+            }
+            if (table[mid].toInt() > address.toInt()) {
                 right = mid - 1;
             } else if (table[mid].toInt() + REGION_SIZE < address.toInt()) {
                 left = mid + 1;
@@ -175,7 +184,7 @@ public class RegionSpace extends Space {
 
     /**
      * Return the region this object belongs to.
-     * 
+     *
      * @param object
      * @return
      */
@@ -188,7 +197,7 @@ public class RegionSpace extends Space {
     /**
      * Full heap tracing. Trace and mark all live objects, and set the bitmap for
      * liveness of its region.
-     * 
+     *
      * @param trace
      * @param object
      * @param allocator
@@ -227,8 +236,9 @@ public class RegionSpace extends Space {
     }
 
     /**
-     * Update the collection set, based on the region liveness.
-     * 
+     * Author: Mahideep Tumati
+     * Create a list of Adress on which GC needs to be implemented
+     *
      * @param trace
      * @param object
      * @param allocator
@@ -236,12 +246,38 @@ public class RegionSpace extends Space {
      */
     @Inline
     public void updateCollectionSet() {
-        // TODO
+
+        try {
+
+            regionLiveBytes = regionLiveBytes.entrySet().stream()
+                    .sorted(comparingByValue())
+                    .collect(toMap(a -> a.getKey(), a -> a.getValue(), (b, c) -> b, LinkedHashMap::new));
+            int count[] = {availableRegionCount};
+            regionLiveBytes.entrySet().stream().forEach(f -> {
+
+                if (f.getValue() <= count[0]) {
+                    regionToPerformGc.add(f.getKey());
+                    count[0]--;
+                }
+                else {
+                    availableRegionCount =count[0];
+                    throw new BreakException();
+                }
+            })
+
+
+        }catch(BreakException be){
+            System.out.prinln("No more elements left");
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 
     /**
      * Evacuate a region using linear scan.
-     * 
+     *
      * @param region
      */
     @Inline
@@ -251,7 +287,7 @@ public class RegionSpace extends Space {
 
     /**
      * Another full heap tracing. Copying all live objects in selected regions.
-     * 
+     *
      * @param trace
      * @param object
      * @param allocator
@@ -300,7 +336,7 @@ public class RegionSpace extends Space {
 
     /**
      * Atomically attempt to set the mark bit of an object.
-     * 
+     *
      * @param object
      * @return true if sucessfully set, false if already set
      */
@@ -334,7 +370,7 @@ public class RegionSpace extends Space {
 
     /**
      * Check the mark bit of an object.
-     * 
+     *
      * @param object
      * @return true if marked, false if not
      */
@@ -347,9 +383,9 @@ public class RegionSpace extends Space {
 
     /**
      * Look into the region's flag bits. collection set
-     * 
+     * <p>
      * (this can be implemented in RegionAllocator)
-     * 
+     *
      * @param region
      * @return
      */
@@ -387,7 +423,7 @@ public class RegionSpace extends Space {
 
     /**
      * Update the live bytes of a region by adding the size of the object.
-     * 
+     *
      * @param region
      * @param object
      */
