@@ -256,14 +256,14 @@ public class RegionSpace extends Space {
             for (Map.Entry<Address, Integer> region : regionLiveBytes.entrySet()) {
                 if (region.getValue() <= availableRegionCount) {
                     regionToPerformGc.add(region.getKey());
-                    availableRegionCount- = region.getValue();
+                    availableRegionCount - = region.getValue();
                 } else {
                     break;
                 }
             }
 
 
-        }  catch (Exception e) {
+        } catch (Exception e) {
             throw e;
         }
 
