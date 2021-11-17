@@ -251,29 +251,30 @@ public class RegionSpace extends Space {
 
             regionLiveBytes = regionLiveBytes.entrySet().stream()
                     .sorted(comparingByValue())
-                    .collect(toMap(a -> a.getKey(), a -> a.getValue(), (b, c) -> b, LinkedHashMap::new));
-            int count[] = {availableRegionCount};
-            regionLiveBytes.entrySet().stream().forEach(f -> {
+                    .collect(toMap(a - > a.getKey(), a - > a.getValue(), (b, c) - > b, LinkedHashMap::new));
+            int count[] = {
+                    availableRegionCount
+            };
+            regionLiveBytes.entrySet().stream().forEach(f - > {
 
-                if (f.getValue() <= count[0]) {
-                    regionToPerformGc.add(f.getKey());
-                    count[0]--;
-                }
-                else {
-                    availableRegionCount =count[0];
-                    throw new BreakException();
-                }
+            if (f.getValue() <= count[0]) {
+                regionToPerformGc.add(f.getKey());
+                count[0]--;
+            } else {
+                availableRegionCount = count[0];
+                throw new BreakException();
+            }
             })
 
 
-        }catch(BreakException be){
+        } catch (BreakException be) {
             System.out.prinln("No more elements left");
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
     }
+
 
     /**
      * Evacuate a region using linear scan.
