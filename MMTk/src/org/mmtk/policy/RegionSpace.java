@@ -245,32 +245,26 @@ public class RegionSpace extends Space {
      * @return
      */
     @Inline
-    public void updateCollectionSet() {
+    public void updateCollectionSet() throws Exception {
 
         try {
 
             regionLiveBytes = regionLiveBytes.entrySet().stream()
                     .sorted(comparingByValue())
                     .collect(toMap(a - > a.getKey(), a - > a.getValue(), (b, c) - > b, LinkedHashMap::new));
-            int count[] = {
-                    availableRegionCount
-            };
-            regionLiveBytes.entrySet().stream().forEach(f - > {
 
-            if (f.getValue() <= count[0]) {
-                regionToPerformGc.add(f.getKey());
-                count[0]--;
-            } else {
-                availableRegionCount = count[0];
-                throw new BreakException();
+            for (Map.Entry<Address, Integer> region : regionLiveBytes.entrySet()) {
+                if (region.getValue() <= availableRegionCount) {
+                    regionToPerformGc.add(region.getKey());
+                    availableRegionCount- = region.getValue();
+                } else {
+                    break;
+                }
             }
-            })
 
 
-        } catch (BreakException be) {
-            System.out.prinln("No more elements left");
-        } catch (Exception e) {
-            e.printStackTrace();
+        }  catch (Exception e) {
+            throw e;
         }
 
     }
