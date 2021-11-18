@@ -102,6 +102,7 @@ public class RegionAllocator extends Allocator {
     @Inline
     private void updateMetaData(Address start) {
         setDataEnd(region, cursor); // data end of current region
+
         region = start; // setup new region
         cursor = region.plus(DATA_START_OFFSET);
     }

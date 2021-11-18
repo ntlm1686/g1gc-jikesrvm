@@ -13,11 +13,9 @@
 package org.mmtk.plan.region;
 
 import org.mmtk.plan.*;
-import org.mmtk.policy.ImmortalSpace;
 import org.mmtk.policy.RegionSpace;
 import org.mmtk.utility.Conversions;
 import org.mmtk.utility.heap.VMRequest;
-import org.mmtk.vm.VM;
 
 import org.vmmagic.pragma.*;
 import org.vmmagic.unboxed.Extent;
@@ -41,18 +39,24 @@ public class Region extends StopTheWorld {
   /**
    *
    */
-  public static final RegionSpace regionSpace = new RegionSpace("region", false, VMRequest.discontiguous());
+  public final static RegionSpace regionSpace = new RegionSpace("region", VMRequest.discontiguous());
   public static final int RS = regionSpace.getDescriptor();
 
   /*****************************************************************************
    * Instance variables
    */
 
-  /**
-   *
-   */
-  public final Trace regionTrace = new Trace(metaDataSpace);
+  public final Trace regionTrace;
 
+  public static final int ALLOC_RS = Plan.ALLOC_DEFAULT;
+  public static final int SCAN_RS = 0;
+
+  /**
+   * Constructor
+   */
+  public Region() {
+    regionTrace = new Trace(metaDataSpace);
+  }
 
   /*****************************************************************************
    * Collection
@@ -64,16 +68,17 @@ public class Region extends StopTheWorld {
   @Inline
   @Override
   public final void collectionPhase(short phaseId) {
-    if (VM.VERIFY_ASSERTIONS) VM.assertions._assert(false);
-    /*
     if (phaseId == PREPARE) {
+      regionSpace.prepare();
+      regionTrace.prepare();
     }
     if (phaseId == CLOSURE) {
+      regionTrace.prepare();
     }
     if (phaseId == RELEASE) {
+      regionSpace.release();
     }
     super.collectionPhase(phaseId);
-    */
   }
 
   /*****************************************************************************
@@ -95,12 +100,11 @@ public class Region extends StopTheWorld {
    * Miscellaneous
    */
 
-  /**
-   * {@inheritDoc}
-   */
+  // TODO
   @Interruptible
   @Override
   protected void registerSpecializedMethods() {
+    TransitiveClosure.registerSpecializedScan(SCAN_RS, RegionTraceLocal.class);
     super.registerSpecializedMethods();
   }
 }

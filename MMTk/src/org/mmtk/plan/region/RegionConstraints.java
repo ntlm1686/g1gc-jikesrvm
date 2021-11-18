@@ -26,10 +26,12 @@ import org.vmmagic.pragma.*;
 public class RegionConstraints extends StopTheWorldConstraints {
   @Override
   public int gcHeaderBits() {
+    // TODO
     return 0;
   }
   @Override
   public int gcHeaderWords() {
+    // TODO
     return 0;
   }
 }

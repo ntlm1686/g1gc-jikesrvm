@@ -82,6 +82,14 @@ public class RegionSpace extends Space {
         ((FreeListPageResource) pr).releasePages(start);
     }
 
+    /**
+     * Release pages
+     */
+    @Inline
+    public void release(){
+
+    }
+
     @Override
     @Inline
     public ObjectReference traceObject(TransitiveClosure trace, ObjectReference object) {
@@ -226,10 +234,9 @@ public class RegionSpace extends Space {
      * GC.
      *
      * @param object  the object ref to the storage to be initialized
-     * @param majorGC Is this copy happening during a major gc?
      */
     @Inline
-    public void postCopy(ObjectReference object, boolean majorGC) {
+    public void postCopy(ObjectReference object) {
         initializeHeader(object, false);
     }
 
@@ -255,6 +262,7 @@ public class RegionSpace extends Space {
     public void evacuateRegion(Address region) {
         // TODO(optional) linear scan a region
     }
+
 
     /**
      * Another full heap tracing. Copying all live objects in selected regions.
@@ -362,6 +370,7 @@ public class RegionSpace extends Space {
      */
     @Inline
     private boolean relocationRequired(Address region) {
+        // TODO
         return relocationRequired(region);
     }
 
