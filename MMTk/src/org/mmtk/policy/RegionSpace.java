@@ -57,6 +57,9 @@ public class RegionSpace extends Space {
     // Before we implement the metadata, we use a map instead
     protected final Map<Address, Integer> regionLiveBytes = new HashMap<Address, Integer>();
 
+    // DeadBytes for every regio that is calcuoated before evacuation
+    protected final Map<Address, Integer> regionDeadBytes = new HashMap<Address, Integer>();
+
     // Regions on which garbage collector will be executed
     List<Address> regionToPerformGc = new ArrayList<>();
 
@@ -94,7 +97,7 @@ public class RegionSpace extends Space {
      * Release pages
      */
     @Inline
-    public void release(){
+    public void release() {
 
     }
 
@@ -242,7 +245,7 @@ public class RegionSpace extends Space {
      * is relevant (for example) when MS is used as the mature space in a copying
      * GC.
      *
-     * @param object  the object ref to the storage to be initialized
+     * @param object the object ref to the storage to be initialized
      */
     @Inline
     public void postCopy(ObjectReference object) {
@@ -262,27 +265,45 @@ public class RegionSpace extends Space {
     public void updateCollectionSet() throws Exception {
 
         try {
+            RegionSpace regionObj = new RegionSpace();
+            // calculate dead Bytes from lives
+            regionObj.updateDeadBytesInformation();
+            regionObj.regionDeadBytes = sortAddressMapByValueDesc(regionObj.regionDeadBytes);
 
-            regionLiveBytes = regionLiveBytes.entrySet().stream()
-                    .sorted(comparingByValue())
-                    .collect(toMap(a - > a.getKey(), a - > a.getValue(), (b, c) - > b, LinkedHashMap::new));
+            int totalAvailableBytes = REGION_SIZE;
 
-            for (Map.Entry<Address, Integer> region : regionLiveBytes.entrySet()) {
-                if (region.getValue() <= availableRegionCount) {
-                    regionToPerformGc.add(region.getKey());
-                    availableRegionCount - = region.getValue();
+            for (Map.Entry<Address, Integer> region : regionObj.regionDeadBytes.entrySet()) {
+                if (REGION_SIZE - region.getValue() <= totalAvailableBytes) {
+                    regionObj.regionToPerformGc.add(region.getKey());
+                    totalAvailableBytes - = REGION_SIZE - region.getValue();
                 } else {
                     break;
                 }
             }
-
-
         } catch (Exception e) {
             throw e;
         }
 
     }
 
+    public void updateDeadBytesInformation() throws Exception {
+
+        try {
+            RegionSpace regionObj = new RegionSpace();
+
+            for (Map.Entry<Adrdess, Integer> addressEntry : regionObj.regionLiveBytes.entrySet()) {
+
+                Address dataEnd = BumpPointer.getDataEnd(addressEntry.getKey());
+
+                regionObj.regionDeadBytes.put(addressEntry.getKey(), (dataEnd.toInt() - addressEntry.getKey().toInt())
+                        - addressEntry.getValue());
+
+            }
+
+        } catch (Exception e) {
+            throw e;
+        }
+    }
 
     /**
      * Evacuate a region using linear scan.
@@ -455,5 +476,23 @@ public class RegionSpace extends Space {
         int liveBytes = size.toInt();
         return liveBytes;
     }
-    
+
+    public static HashMap<String, Integer> sortAddressMapByValueDesc(HashMap<Address, Integer> addressMap) {
+        List<Map.Entry<Address, Integer>> list =
+                new LinkedList<Map.Entry<Address, Integer>>(addressMap.entrySet());
+
+        Collections.sort(list, new Comparator<Map.Entry<Address, Integer>>() {
+            public int compare(Map.Entry<Address, Integer> o1,
+                               Map.Entry<Address, Integer> o2) {
+                return (o2.getValue()).compareTo(o1.getValue());
+            }
+        });
+
+        HashMap<Address, Integer> tempMap = new LinkedHashMap<String, Integer>();
+        for (Map.Entry<String, Integer> address : list) {
+            tempMap.put(address.getKey(), address.getValue());
+        }
+        return tempMap;
+    }
+
 }
