@@ -30,9 +30,8 @@ public final class RegionTraceLocal extends TraceLocal {
    * @param trace the associated global trace
    */
   public RegionTraceLocal(Trace trace) {
-    super(trace);
+    super(Region.ALLOC_RS, trace);
   }
-
 
   @Inline
   @Override
@@ -44,8 +43,8 @@ public final class RegionTraceLocal extends TraceLocal {
     Region.regionSpace.updateCollectionSet();
 
     // 2. perform scanning on collecting set(regions)
-    // region.regionSpace.evacuate();
-
+    // TODO how to initialize another full heap scanning?
+    // Region.regionSpace.traceEvacuateObject();
 
   }
 
@@ -53,9 +52,6 @@ public final class RegionTraceLocal extends TraceLocal {
    * Externally visible Object processing and tracing
    */
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public boolean isLive(ObjectReference object) {
     if (object.isNull()) return false;

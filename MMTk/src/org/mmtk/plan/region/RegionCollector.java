@@ -13,19 +13,24 @@
 package org.mmtk.plan.region;
 
 import org.mmtk.plan.*;
-
+import org.mmtk.policy.RegionLocal;
+import org.mmtk.utility.ForwardingWord;
 import org.mmtk.vm.VM;
 
 import org.vmmagic.pragma.*;
+import org.vmmagic.unboxed.Address;
+import org.vmmagic.unboxed.ObjectReference;
 
 /**
- * This class implements <i>per-collector thread</i> behavior and state
- * for the <i>NoGC</i> plan, which simply allocates (without ever collecting
- * until the available space is exhausted.<p>
+ * This class implements <i>per-collector thread</i> behavior and state for the
+ * <i>NoGC</i> plan, which simply allocates (without ever collecting until the
+ * available space is exhausted.
+ * <p>
  *
- * Specifically, this class <i>would</i> define <i>NoGC</i> collection time semantics,
- * however, since this plan never collects, this class consists only of stubs which
- * may be useful as a template for implementing a basic collector.
+ * Specifically, this class <i>would</i> define <i>NoGC</i> collection time
+ * semantics, however, since this plan never collects, this class consists only
+ * of stubs which may be useful as a template for implementing a basic
+ * collector.
  *
  * @see Region
  * @see RegionMutator
@@ -38,12 +43,20 @@ public class RegionCollector extends StopTheWorldCollector {
    * Instance fields
    */
 
-  /**
-   *
-   */
-  private final RegionTraceLocal trace = new RegionTraceLocal(global().regionTrace);
-  protected final TraceLocal currentTrace = trace;
+  private final RegionTraceLocal trace; // = new RegionTraceLocal(global().regionTrace);
+  protected final RegionLocal rl;
 
+  /**
+   * Constructor
+   */
+  public RegionCollector() {
+    this(new RegionTraceLocal(global().regionTrace));
+  }
+
+  public RegionCollector(RegionTraceLocal trace) {
+    this.trace = trace;
+    this.rl = new RegionLocal(Region.regionSpace);
+  }
 
   /****************************************************************************
    * Collection
@@ -52,26 +65,40 @@ public class RegionCollector extends StopTheWorldCollector {
   /**
    * Perform a garbage collection
    */
-  @Override
-  public final void collect() {
-    VM.assertions.fail("GC Triggered in NoGC Plan. Is -X:gc:ignoreSystemGC=true ?");
-  }
-
   @Inline
   @Override
   public final void collectionPhase(short phaseId, boolean primary) {
-    VM.assertions.fail("GC Triggered in NoGC Plan.");
     if (phaseId == Region.PREPARE) {
+
     }
 
     if (phaseId == Region.CLOSURE) {
-
+      trace.completeTrace();
+      return;
     }
 
     if (phaseId == Region.RELEASE) {
+      trace.release();
     }
 
     super.collectionPhase(phaseId, primary);
+  }
+
+  /****************************************************************************
+   *
+   * Collection-time allocation
+   */
+  @Override
+  @Inline
+  public Address allocCopy(ObjectReference original, int bytes, int align, int offset, int allocator) {
+      return rl.alloc(bytes, align, offset);
+  }
+
+  @Override
+  @Inline
+  public void postCopy(ObjectReference object, ObjectReference typeRef, int bytes, int allocator) {
+    ForwardingWord.clearForwardingBits(object);
+    Region.regionSpace.postCopy(object);
   }
 
   /****************************************************************************
@@ -86,6 +113,6 @@ public class RegionCollector extends StopTheWorldCollector {
 
   @Override
   public final TraceLocal getCurrentTrace() {
-    return currentTrace;
+    return trace;
   }
 }

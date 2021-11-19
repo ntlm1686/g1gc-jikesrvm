@@ -12,26 +12,24 @@
  */
 package org.mmtk.plan.region;
 
-import org.mmtk.plan.MutatorContext;
 import org.mmtk.plan.StopTheWorldMutator;
-import org.mmtk.policy.ImmortalLocal;
 import org.mmtk.policy.RegionLocal;
 import org.mmtk.policy.Space;
 import org.mmtk.utility.alloc.Allocator;
-import org.mmtk.vm.VM;
 
 import org.vmmagic.pragma.*;
 import org.vmmagic.unboxed.*;
 
 /**
- * This class implements <i>per-mutator thread</i> behavior and state
- * for the <i>NoGC</i> plan, which simply allocates (without ever collecting
- * until the available space is exhausted.<p>
+ * This class implements <i>per-mutator thread</i> behavior and state for the
+ * <i>NoGC</i> plan, which simply allocates (without ever collecting until the
+ * available space is exhausted.
+ * <p>
  *
- * Specifically, this class defines <i>NoGC</i> mutator-time allocation
- * through a bump pointer (<code>def</code>) and includes stubs for
- * per-mutator thread collection semantics (since there is no collection
- * in this plan, these remain just stubs).
+ * Specifically, this class defines <i>NoGC</i> mutator-time allocation through
+ * a bump pointer (<code>def</code>) and includes stubs for per-mutator thread
+ * collection semantics (since there is no collection in this plan, these remain
+ * just stubs).
  *
  * @see Region
  * @see RegionCollector
@@ -72,19 +70,19 @@ public class RegionMutator extends StopTheWorldMutator {
 
   @Inline
   @Override
-  public void postAlloc(ObjectReference ref, ObjectReference typeRef,
-      int bytes, int allocator) {
-    if (allocator != Region.ALLOC_DEFAULT) {
+  public void postAlloc(ObjectReference ref, ObjectReference typeRef, int bytes, int allocator) {
+    if (allocator == Region.ALLOC_RS)
+      Region.regionSpace.postAlloc(ref);
+    else
       super.postAlloc(ref, typeRef, bytes, allocator);
-    }
   }
 
   @Override
   public Allocator getAllocatorFromSpace(Space space) {
-    if (space == Region.regionSpace) return rl;
+    if (space == Region.regionSpace)
+      return rl;
     return super.getAllocatorFromSpace(space);
   }
-
 
   /****************************************************************************
    * Collection
@@ -96,13 +94,14 @@ public class RegionMutator extends StopTheWorldMutator {
   @Inline
   @Override
   public final void collectionPhase(short phaseId, boolean primary) {
-    /*
-     if (phaseId == NoGC.PREPARE) {
-     }
+    if (phaseId == Region.PREPARE) {
+      ;// do nothing
+    }
 
-     if (phaseId == NoGC.RELEASE) {
-     }
-     super.collectionPhase(phaseId, primary);
-     */
+    if (phaseId == Region.RELEASE) {
+      ;// do nothing
+    }
+
+    super.collectionPhase(phaseId, primary);
   }
 }

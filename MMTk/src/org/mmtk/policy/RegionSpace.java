@@ -62,18 +62,19 @@ public class RegionSpace extends Space {
 
     protected final Map<Address, Boolean> requireRelocation = new HashMap<Address, Boolean>();
 
+    // constructor
     public RegionSpace(String name, VMRequest vmRequest) {
         this(name, true, vmRequest);
     }
 
-    public RegionSpace(String name, boolean zeroed, VMRequest vmRequest) {
+    // private constructor
+    private RegionSpace(String name, boolean zeroed, VMRequest vmRequest) {
         super(name, true, false, zeroed, vmRequest);
         if (vmRequest.isDiscontiguous()) {
             pr = new MonotonePageResource(this, META_DATA_PAGES_PER_REGION);
         } else {
             pr = new MonotonePageResource(this, start, extent, META_DATA_PAGES_PER_REGION);
         }
-
         this.initializeRegions();
         this.resetRegionLiveBytes();
         this.resetRequireRelocation();
@@ -81,11 +82,20 @@ public class RegionSpace extends Space {
 
     /**
      * Release allocated pages.
+     * // TODO how does releasePages() work?
      */
     @Override
     @Inline
     public void release(Address start) {
         ((FreeListPageResource) pr).releasePages(start);
+    }
+
+    /**
+     * Release pages
+     */
+    @Inline
+    public void release(){
+
     }
 
     @Override
@@ -95,6 +105,9 @@ public class RegionSpace extends Space {
         return ObjectReference.nullReference();
     }
 
+    /**
+     * If an object is alive.
+     */
     @Override
     @Inline
     public boolean isLive(ObjectReference object) {
@@ -105,6 +118,7 @@ public class RegionSpace extends Space {
      * Prepare for the next GC.
      */
     public void prepare() {
+        // TODO important
     }
 
     /**
@@ -167,7 +181,8 @@ public class RegionSpace extends Space {
     }
 
     private Address idealRegion(Address[] table, Address address) {
-        int left, right = table.length - 1;
+        int left = 0;
+        int right = table.length - 1;
         while (left <= right) {
             int mid = (left + right) >>> 1;
             if (this.isRegionIdeal(table[mid], address)) {
@@ -228,10 +243,9 @@ public class RegionSpace extends Space {
      * GC.
      *
      * @param object  the object ref to the storage to be initialized
-     * @param majorGC Is this copy happening during a major gc?
      */
     @Inline
-    public void postCopy(ObjectReference object, boolean majorGC) {
+    public void postCopy(ObjectReference object) {
         initializeHeader(object, false);
     }
 
@@ -277,8 +291,9 @@ public class RegionSpace extends Space {
      */
     @Inline
     public void evacuateRegion(Address region) {
-        // linear scan a region
+        // TODO(optional) linear scan a region
     }
+
 
     /**
      * Another full heap tracing. Copying all live objects in selected regions.
@@ -386,6 +401,7 @@ public class RegionSpace extends Space {
      */
     @Inline
     private boolean relocationRequired(Address region) {
+        // TODO
         return relocationRequired(region);
     }
 
@@ -439,4 +455,5 @@ public class RegionSpace extends Space {
         int liveBytes = size.toInt();
         return liveBytes;
     }
+    
 }
