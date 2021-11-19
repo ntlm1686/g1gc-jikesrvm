@@ -78,6 +78,7 @@ public class RegionCollector extends StopTheWorldCollector {
     }
 
     if (phaseId == Region.RELEASE) {
+      trace.completeTrace();
       trace.release();
     }
 

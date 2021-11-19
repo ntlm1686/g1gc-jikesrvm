@@ -101,7 +101,7 @@ public class RegionMutator extends StopTheWorldMutator {
     if (phaseId == Region.RELEASE) {
       ;// do nothing
     }
-
+    rl.reset();
     super.collectionPhase(phaseId, primary);
   }
 }

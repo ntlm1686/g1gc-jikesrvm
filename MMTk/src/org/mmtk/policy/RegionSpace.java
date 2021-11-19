@@ -273,7 +273,7 @@ public class RegionSpace extends Space {
      * @return return new object if moved, otherwise return original object
      */
     @Inline
-    public ObjectReference traceEvcauateObject(TransitiveClosure trace, ObjectReference object, int allocator) {
+    public ObjectReference traceEvacuateObject(TransitiveClosure trace, ObjectReference object, int allocator) {
         if (relocationRequired(regionOf(object))) {
             Word forwardingWord = ForwardingWord.attemptToForward(object);
             if (ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
