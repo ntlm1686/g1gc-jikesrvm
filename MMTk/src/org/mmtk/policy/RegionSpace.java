@@ -55,13 +55,13 @@ public class RegionSpace extends Space {
     int consumedRegionCount = 0;
 
     // Before we implement the metadata, we use a map instead
-    protected final Map<Address, Integer> regionLiveBytes = new HashMap<Address, Integer>();
+    protected static Map<Address, Integer> regionLiveBytes = new HashMap<>();
 
     // DeadBytes for every regio that is calcuoated before evacuation
-    protected final Map<Address, Integer> regionDeadBytes = new HashMap<Address, Integer>();
+    protected static Map<Address, Integer> regionDeadBytes = new HashMap<();
 
     // Regions on which garbage collector will be executed
-    protected final List<Address> collectionSet = new ArrayList<>();
+    protected static List<Address> collectionSet = new ArrayList<>();
 
     protected final Map<Address, Boolean> requireRelocation = new HashMap<Address, Boolean>();
 
@@ -264,18 +264,17 @@ public class RegionSpace extends Space {
     @Inline
     public void updateCollectionSet() throws Exception {
         try {
-            RegionSpace regionObj = new RegionSpace();
             // calculate dead Bytes from lives
-            regionObj.updateDeadBytesInformation();
-            regionObj.regionDeadBytes = sortAddressMapByValueDesc(regionObj.regionDeadBytes);
+            updateDeadBytesInformation();
+            regionDeadBytes = sortAddressMapByValueDesc(regionDeadBytes);
 
-            int totalAvailableBytes = REGION_SIZE * regionObj.availableRegionCount;
+            int totalAvailableBytes = REGION_SIZE * availableRegionCount;
 
-            for (Map.Entry<Address, Integer> region : regionObj.regionDeadBytes.entrySet()) {
+            for (Map.Entry<Address, Integer> region : regionDeadBytes.entrySet()) {
 
-                if (regionObj.regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
-                    regionObj.collectionSet.add(region.getKey());
-                    totalAvailableBytes - = liveBytes;
+                if (regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
+                    collectionSet.add(region.getKey());
+                    totalAvailableBytes - = regionLiveBytes.get(region.getKey());
                 } else {
                     break;
                 }
@@ -289,13 +288,12 @@ public class RegionSpace extends Space {
     public void updateDeadBytesInformation() throws Exception {
 
         try {
-            RegionSpace regionObj = new RegionSpace();
 
-            for (Map.Entry<Adrdess, Integer> addressEntry : regionObj.regionLiveBytes.entrySet()) {
+            for (Map.Entry<Adrdess, Integer> addressEntry :regionLiveBytes.entrySet()) {
 
                 Address dataEnd = BumpPointer.getDataEnd(addressEntry.getKey());
 
-                regionObj.regionDeadBytes.put(addressEntry.getKey(), (dataEnd.toInt() - addressEntry.getKey().toInt())
+                regionDeadBytes.put(addressEntry.getKey(), (dataEnd.toInt() - addressEntry.getKey().toInt())
                         - addressEntry.getValue());
 
             }
@@ -477,19 +475,20 @@ public class RegionSpace extends Space {
         return liveBytes;
     }
 
-    public static HashMap<String, Integer> sortAddressMapByValueDesc(HashMap<Address, Integer> addressMap) {
+    public static Map<Address, Integer> sortAddressMapByValueDesc(Map<Address, Integer> addressMap) {
         List<Map.Entry<Address, Integer>> list =
                 new LinkedList<Map.Entry<Address, Integer>>(addressMap.entrySet());
 
         Collections.sort(list, new Comparator<Map.Entry<Address, Integer>>() {
+           @Override
             public int compare(Map.Entry<Address, Integer> o1,
                                Map.Entry<Address, Integer> o2) {
                 return (o2.getValue()).compareTo(o1.getValue());
             }
         });
 
-        HashMap<Address, Integer> tempMap = new LinkedHashMap<String, Integer>();
-        for (Map.Entry<String, Integer> address : list) {
+        Map<Address, Integer> tempMap = new LinkedHashMap<>();
+        for (Map.Entry<Address, Integer> address : list) {
             tempMap.put(address.getKey(), address.getValue());
         }
         return tempMap;
