@@ -274,6 +274,7 @@ public class RegionSpace extends Space {
 
                 if (regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
                     collectionSet.add(region.getKey());
+                    requireRelocation.put(region.getKey(), true);
                     totalAvailableBytes - = regionLiveBytes.get(region.getKey());
                 } else {
                     break;
