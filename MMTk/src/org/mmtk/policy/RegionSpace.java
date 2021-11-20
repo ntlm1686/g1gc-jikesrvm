@@ -61,7 +61,7 @@ public class RegionSpace extends Space {
     protected final Map<Address, Integer> regionDeadBytes = new HashMap<Address, Integer>();
 
     // Regions on which garbage collector will be executed
-    List<Address> regionToPerformGc = new ArrayList<>();
+    protected final List<Address> collectionSet = new ArrayList<>();
 
     protected final Map<Address, Boolean> requireRelocation = new HashMap<Address, Boolean>();
 
@@ -263,19 +263,19 @@ public class RegionSpace extends Space {
      */
     @Inline
     public void updateCollectionSet() throws Exception {
-
         try {
             RegionSpace regionObj = new RegionSpace();
             // calculate dead Bytes from lives
             regionObj.updateDeadBytesInformation();
             regionObj.regionDeadBytes = sortAddressMapByValueDesc(regionObj.regionDeadBytes);
 
-            int totalAvailableBytes = REGION_SIZE;
+            int totalAvailableBytes = REGION_SIZE * regionObj.availableRegionCount;
 
             for (Map.Entry<Address, Integer> region : regionObj.regionDeadBytes.entrySet()) {
-                if (REGION_SIZE - region.getValue() <= totalAvailableBytes) {
-                    regionObj.regionToPerformGc.add(region.getKey());
-                    totalAvailableBytes - = REGION_SIZE - region.getValue();
+
+                if (regionObj.regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
+                    regionObj.collectionSet.add(region.getKey());
+                    totalAvailableBytes - = liveBytes;
                 } else {
                     break;
                 }
