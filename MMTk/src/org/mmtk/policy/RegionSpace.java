@@ -1,13 +1,12 @@
 package org.mmtk.policy;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Arrays;
-import java.util.Comparator;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import org.mmtk.plan.TransitiveClosure;
 import org.mmtk.utility.ForwardingWord;
 import org.mmtk.utility.*;
+import org.mmtk.utility.alloc.BumpPointer;
 import org.mmtk.utility.heap.*;
 import org.mmtk.vm.Lock;
 import org.mmtk.vm.VM;
@@ -290,7 +289,7 @@ public class RegionSpace extends Space {
 
         try {
 
-            for (Map.Entry<Adrdess, Integer> addressEntry :regionLiveBytes.entrySet()) {
+            for (Map.Entry<Address, Integer> addressEntry :regionLiveBytes.entrySet()) {
 
                 Address dataEnd = BumpPointer.getDataEnd(addressEntry.getKey());
 
