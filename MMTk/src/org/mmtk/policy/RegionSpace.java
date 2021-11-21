@@ -488,7 +488,7 @@ public class RegionSpace extends Space {
             }
         });
 
-        Map<Address, Integer> tempMap = new LinkedHashMap<>();
+        Map<Address, Integer> tempMap = new LinkedHashMap<Address, Integer>();
         for (Map.Entry<Address, Integer> address : list) {
             tempMap.put(address.getKey(), address.getValue());
         }
