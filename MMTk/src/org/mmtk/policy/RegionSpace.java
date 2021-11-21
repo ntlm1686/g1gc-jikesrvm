@@ -61,7 +61,7 @@ public class RegionSpace extends Space {
     protected static Map<Address, Integer> regionDeadBytes = new HashMap<Address, Integer>();
 
     // Regions on which garbage collector will be executed
-    protected static List<Address> collectionSet = new ArrayList<>();
+    protected static List<Address> collectionSet = new ArrayList<Address>();
 
     protected final Map<Address, Boolean> requireRelocation = new HashMap<Address, Boolean>();
 
