@@ -261,45 +261,30 @@ public class RegionSpace extends Space {
      * @return
      */
     @Inline
-    public void updateCollectionSet() throws Exception {
-        try {
-            // calculate dead Bytes from lives
-            updateDeadBytesInformation();
-            regionDeadBytes = sortAddressMapByValueDesc(regionDeadBytes);
+    public void updateCollectionSet() {
+        // calculate dead Bytes from lives
+        updateDeadBytesInformation();
+        regionDeadBytes = sortAddressMapByValueDesc(regionDeadBytes);
 
-            int totalAvailableBytes = REGION_SIZE * availableRegionCount;
+        int totalAvailableBytes = REGION_SIZE * availableRegionCount;
 
-            for (Map.Entry<Address, Integer> region : regionDeadBytes.entrySet()) {
+        for (Map.Entry<Address, Integer> region : regionDeadBytes.entrySet()) {
 
-                if (regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
-                    collectionSet.add(region.getKey());
-                    requireRelocation.put(region.getKey(), true);
-                    totalAvailableBytes -= regionLiveBytes.get(region.getKey());
-                } else {
-                    break;
-                }
+            if (regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
+                collectionSet.add(region.getKey());
+                requireRelocation.put(region.getKey(), true);
+                totalAvailableBytes -= regionLiveBytes.get(region.getKey());
+            } else {
+                break;
             }
-        } catch (Exception e) {
-            throw e;
         }
-
     }
 
-    public void updateDeadBytesInformation() throws Exception {
+    public void updateDeadBytesInformation() {
 
-        try {
-
-            for (Map.Entry<Address, Integer> addressEntry :regionLiveBytes.entrySet()) {
-
-                Address dataEnd = BumpPointer.getDataEnd(addressEntry.getKey());
-
-                regionDeadBytes.put(addressEntry.getKey(), (dataEnd.toInt() - addressEntry.getKey().toInt())
-                        - addressEntry.getValue());
-
-            }
-
-        } catch (Exception e) {
-            throw e;
+        for (Map.Entry<Address, Integer> addressEntry :regionLiveBytes.entrySet()) {
+            Address dataEnd = BumpPointer.getDataEnd(addressEntry.getKey());
+            regionDeadBytes.put(addressEntry.getKey(), (dataEnd.toInt() - addressEntry.getKey().toInt()) - addressEntry.getValue());
         }
     }
 
