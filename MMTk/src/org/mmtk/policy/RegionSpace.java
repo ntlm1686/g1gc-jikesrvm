@@ -463,7 +463,6 @@ public class RegionSpace extends Space {
     public static Map<Address, Integer> sortAddressMapByValueDesc(Map<Address, Integer> addressMap) {
         List<Map.Entry<Address, Integer>> list =
                 new LinkedList<Map.Entry<Address, Integer>>(addressMap.entrySet());
-
         Collections.sort(list, new Comparator<Map.Entry<Address, Integer>>() {
            @Override
             public int compare(Map.Entry<Address, Integer> o1,
