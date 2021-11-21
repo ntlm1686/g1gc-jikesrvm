@@ -405,7 +405,6 @@ public class RegionSpace extends Space {
      */
     @Inline
     private boolean relocationRequired(Address region) {
-        // TODO
         return relocationRequired(region);
     }
 
