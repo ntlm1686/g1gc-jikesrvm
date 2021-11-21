@@ -55,10 +55,10 @@ public class RegionSpace extends Space {
     int consumedRegionCount = 0;
 
     // Before we implement the metadata, we use a map instead
-    protected static Map<Address, Integer> regionLiveBytes = new HashMap<>();
+    protected static Map<Address, Integer> regionLiveBytes = new HashMap<Address, Integer>();
 
     // DeadBytes for every regio that is calcuoated before evacuation
-    protected static Map<Address, Integer> regionDeadBytes = new HashMap<();
+    protected static Map<Address, Integer> regionDeadBytes = new HashMap<Address, Integer>();
 
     // Regions on which garbage collector will be executed
     protected static List<Address> collectionSet = new ArrayList<>();
@@ -275,7 +275,7 @@ public class RegionSpace extends Space {
                 if (regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
                     collectionSet.add(region.getKey());
                     requireRelocation.put(region.getKey(), true);
-                    totalAvailableBytes - = regionLiveBytes.get(region.getKey());
+                    totalAvailableBytes -= regionLiveBytes.get(region.getKey());
                 } else {
                     break;
                 }
