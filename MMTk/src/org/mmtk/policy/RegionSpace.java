@@ -397,7 +397,7 @@ public class RegionSpace extends Space {
 
     /**
      * Look into the region's flag bits. collection set
-     * <p>
+     * 
      * (this can be implemented in RegionAllocator)
      *
      * @param region
