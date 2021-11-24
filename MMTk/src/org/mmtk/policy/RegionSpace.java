@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.Arrays;
 import java.util.Comparator;
 
+import static org.mmtk.utility.Constants.BYTES_IN_PAGE;
+
 import org.mmtk.plan.TransitiveClosure;
 import org.mmtk.utility.ForwardingWord;
 import org.mmtk.utility.*;
@@ -28,7 +30,6 @@ public class RegionSpace extends Space {
     private static final byte MARK_COUNT_INCREMENT = (byte) (1 << COUNT_BASE);
     private static final byte MARK_COUNT_MASK = (byte) (((1 << MAX_MARKCOUNT_BITS) - 1) << COUNT_BASE); // minus 1 for
                                                                                                         // copy/alloc
-
     private byte markState = 1;
     private byte allocState = 0;
     private boolean isAllocAsMarked = false;
@@ -36,7 +37,7 @@ public class RegionSpace extends Space {
     // TODO
     private static final int META_DATA_PAGES_PER_REGION = 0;
     public static final int PAGES_PER_REGION = 256;
-    public static final int REGION_SIZE = 32768; // TODO: size
+    public static final int REGION_SIZE = BYTES_IN_PAGE * PAGES_PER_REGION;
     public static final int REGION_NUMBER = 1000;
 
     protected final Lock lock = VM.newLock("RegionSpaceGloabl");
@@ -87,7 +88,7 @@ public class RegionSpace extends Space {
      */
     @Inline
     public void release(){
-
+        // TODO
     }
 
     @Override
@@ -263,7 +264,6 @@ public class RegionSpace extends Space {
         // TODO(optional) linear scan a region
     }
 
-
     /**
      * Another full heap tracing. Copying all live objects in selected regions.
      * 
@@ -370,7 +370,6 @@ public class RegionSpace extends Space {
      */
     @Inline
     private boolean relocationRequired(Address region) {
-        // TODO
         return relocationRequired(region);
     }
 
@@ -424,5 +423,5 @@ public class RegionSpace extends Space {
         int liveBytes = size.toInt();
         return liveBytes;
     }
-    
+
 }
