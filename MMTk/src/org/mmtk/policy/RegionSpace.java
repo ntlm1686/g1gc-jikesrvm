@@ -1,15 +1,14 @@
 package org.mmtk.policy;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Arrays;
-import java.util.Comparator;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.mmtk.utility.Constants.BYTES_IN_PAGE;
 
 import org.mmtk.plan.TransitiveClosure;
 import org.mmtk.utility.ForwardingWord;
 import org.mmtk.utility.*;
+import org.mmtk.utility.alloc.BumpPointer;
 import org.mmtk.utility.heap.*;
 import org.mmtk.vm.Lock;
 import org.mmtk.vm.VM;
@@ -19,17 +18,22 @@ import org.vmmagic.unboxed.*;
 public class RegionSpace extends Space {
 
     public static final boolean HEADER_MARK_BITS = VM.config.HEADER_MARK_BITS;
-    /** highest bit bits we may use */
+    /**
+     * highest bit bits we may use
+     */
     private static final int AVAILABLE_LOCAL_BITS = 8 - HeaderByte.USED_GLOBAL_BITS;
 
     private static final int COUNT_BASE = 0;
 
-    /** Mark bits */
+    /**
+     * Mark bits
+     */
     public static final int DEFAULT_MARKCOUNT_BITS = 4;
     public static final int MAX_MARKCOUNT_BITS = AVAILABLE_LOCAL_BITS - COUNT_BASE;
     private static final byte MARK_COUNT_INCREMENT = (byte) (1 << COUNT_BASE);
     private static final byte MARK_COUNT_MASK = (byte) (((1 << MAX_MARKCOUNT_BITS) - 1) << COUNT_BASE); // minus 1 for
-                                                                                                        // copy/alloc
+    // copy/alloc
+
     private byte markState = 1;
     private byte allocState = 0;
     private boolean isAllocAsMarked = false;
@@ -52,7 +56,14 @@ public class RegionSpace extends Space {
     int consumedRegionCount = 0;
 
     // Before we implement the metadata, we use a map instead
-    protected final Map<Address, Integer> regionLiveBytes = new HashMap<Address, Integer>();
+    protected static Map<Address, Integer> regionLiveBytes = new HashMap<Address, Integer>();
+
+    // DeadBytes for every regio that is calcuoated before evacuation
+    protected static Map<Address, Integer> regionDeadBytes = new HashMap<Address, Integer>();
+
+    // Regions on which garbage collector will be executed
+    protected static List<Address> collectionSet = new ArrayList<Address>();
+
     protected final Map<Address, Boolean> requireRelocation = new HashMap<Address, Boolean>();
 
     // constructor
@@ -87,8 +98,8 @@ public class RegionSpace extends Space {
      * Release pages
      */
     @Inline
-    public void release(){
-        // TODO
+    public void release() {
+
     }
 
     @Override
@@ -116,7 +127,7 @@ public class RegionSpace extends Space {
 
     /**
      * Return a new region to the allocator.
-     * 
+     *
      * @return
      */
     @Inline
@@ -180,7 +191,8 @@ public class RegionSpace extends Space {
             int mid = (left + right) >>> 1;
             if (this.isRegionIdeal(table[mid], address)) {
                 return table[mid];
-            } if (table[mid].toInt() > address.toInt()) {
+            }
+            if (table[mid].toInt() > address.toInt()) {
                 right = mid - 1;
             } else if (table[mid].toInt() + REGION_SIZE < address.toInt()) {
                 left = mid + 1;
@@ -191,7 +203,7 @@ public class RegionSpace extends Space {
 
     /**
      * Return the region this object belongs to.
-     * 
+     *
      * @param object
      * @return
      */
@@ -204,7 +216,7 @@ public class RegionSpace extends Space {
     /**
      * Full heap tracing. Trace and mark all live objects, and set the bitmap for
      * liveness of its region.
-     * 
+     *
      * @param trace
      * @param object
      * @param allocator
@@ -234,7 +246,7 @@ public class RegionSpace extends Space {
      * is relevant (for example) when MS is used as the mature space in a copying
      * GC.
      *
-     * @param object  the object ref to the storage to be initialized
+     * @param object the object ref to the storage to be initialized
      */
     @Inline
     public void postCopy(ObjectReference object) {
@@ -242,8 +254,9 @@ public class RegionSpace extends Space {
     }
 
     /**
-     * Update the collection set, based on the region liveness.
-     * 
+     * Author: Mahideep Tumati
+     * Create a list of Adress on which GC needs to be implemented
+     *
      * @param trace
      * @param object
      * @param allocator
@@ -251,12 +264,35 @@ public class RegionSpace extends Space {
      */
     @Inline
     public void updateCollectionSet() {
-        // TODO
+        // calculate dead Bytes from lives
+        updateDeadBytesInformation();
+        regionDeadBytes = sortAddressMapByValueDesc(regionDeadBytes);
+
+        int totalAvailableBytes = REGION_SIZE * availableRegionCount;
+
+        for (Map.Entry<Address, Integer> region : regionDeadBytes.entrySet()) {
+
+            if (regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
+                collectionSet.add(region.getKey());
+                requireRelocation.put(region.getKey(), true);
+                totalAvailableBytes -= regionLiveBytes.get(region.getKey());
+            } else {
+                break;
+            }
+        }
+    }
+
+    public void updateDeadBytesInformation() {
+
+        for (Map.Entry<Address, Integer> addressEntry :regionLiveBytes.entrySet()) {
+            Address dataEnd = BumpPointer.getDataEnd(addressEntry.getKey());
+            regionDeadBytes.put(addressEntry.getKey(), (dataEnd.toInt() - addressEntry.getKey().toInt()) - addressEntry.getValue());
+        }
     }
 
     /**
      * Evacuate a region using linear scan.
-     * 
+     *
      * @param region
      */
     @Inline
@@ -266,14 +302,14 @@ public class RegionSpace extends Space {
 
     /**
      * Another full heap tracing. Copying all live objects in selected regions.
-     * 
+     *
      * @param trace
      * @param object
      * @param allocator
      * @return return new object if moved, otherwise return original object
      */
     @Inline
-    public ObjectReference traceEvcauateObject(TransitiveClosure trace, ObjectReference object, int allocator) {
+    public ObjectReference traceEvacuateObject(TransitiveClosure trace, ObjectReference object, int allocator) {
         if (relocationRequired(regionOf(object))) {
             Word forwardingWord = ForwardingWord.attemptToForward(object);
             if (ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
@@ -315,7 +351,7 @@ public class RegionSpace extends Space {
 
     /**
      * Atomically attempt to set the mark bit of an object.
-     * 
+     *
      * @param object
      * @return true if sucessfully set, false if already set
      */
@@ -349,7 +385,7 @@ public class RegionSpace extends Space {
 
     /**
      * Check the mark bit of an object.
-     * 
+     *
      * @param object
      * @return true if marked, false if not
      */
@@ -364,7 +400,7 @@ public class RegionSpace extends Space {
      * Look into the region's flag bits. collection set
      * 
      * (this can be implemented in RegionAllocator)
-     * 
+     *
      * @param region
      * @return
      */
@@ -402,7 +438,7 @@ public class RegionSpace extends Space {
 
     /**
      * Update the live bytes of a region by adding the size of the object.
-     * 
+     *
      * @param region
      * @param object
      */
@@ -422,6 +458,24 @@ public class RegionSpace extends Space {
         Offset size = objectStart.diff(objectEnd);
         int liveBytes = size.toInt();
         return liveBytes;
+    }
+
+    public static Map<Address, Integer> sortAddressMapByValueDesc(Map<Address, Integer> addressMap) {
+        List<Map.Entry<Address, Integer>> list =
+                new LinkedList<Map.Entry<Address, Integer>>(addressMap.entrySet());
+        Collections.sort(list, new Comparator<Map.Entry<Address, Integer>>() {
+           @Override
+            public int compare(Map.Entry<Address, Integer> o1,
+                               Map.Entry<Address, Integer> o2) {
+                return (o2.getValue()).compareTo(o1.getValue());
+            }
+        });
+
+        Map<Address, Integer> tempMap = new LinkedHashMap<Address, Integer>();
+        for (Map.Entry<Address, Integer> address : list) {
+            tempMap.put(address.getKey(), address.getValue());
+        }
+        return tempMap;
     }
 
 }
