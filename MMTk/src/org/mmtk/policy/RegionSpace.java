@@ -15,6 +15,13 @@ import org.mmtk.vm.VM;
 import org.vmmagic.pragma.Inline;
 import org.vmmagic.unboxed.*;
 
+// below imports are added for linearscan
+import static org.mmtk.utility.Constants.BYTES_IN_ADDRESS;
+
+import org.mmtk.utility.gcspy.drivers.LinearSpaceDriver;
+import org.mmtk.plan.TransitiveClosure;
+
+
 public class RegionSpace extends Space {
 
     public static final boolean HEADER_MARK_BITS = VM.config.HEADER_MARK_BITS;
@@ -70,6 +77,15 @@ public class RegionSpace extends Space {
     public RegionSpace(String name, VMRequest vmRequest) {
         this(name, true, vmRequest);
     }
+
+    static LinearSpaceDriver linearScanDriver;
+
+
+    // helps for linear scan
+    // Data must start particle-aligned.
+    protected static final Offset DATA_START_OFFSET = alignAllocationNoFill(
+            Address.zero().plus(DATA_END_OFFSET.plus(BYTES_IN_ADDRESS)),
+            MIN_ALIGNMENT, 0).toWord().toOffset();
 
     // private constructor
     private RegionSpace(String name, boolean zeroed, VMRequest vmRequest) {
@@ -284,7 +300,7 @@ public class RegionSpace extends Space {
 
     public void updateDeadBytesInformation() {
 
-        for (Map.Entry<Address, Integer> addressEntry :regionLiveBytes.entrySet()) {
+        for (Map.Entry<Address, Integer> addressEntry : regionLiveBytes.entrySet()) {
             Address dataEnd = BumpPointer.getDataEnd(addressEntry.getKey());
             regionDeadBytes.put(addressEntry.getKey(), (dataEnd.toInt() - addressEntry.getKey().toInt()) - addressEntry.getValue());
         }
@@ -398,7 +414,7 @@ public class RegionSpace extends Space {
 
     /**
      * Look into the region's flag bits. collection set
-     * 
+     * <p>
      * (this can be implemented in RegionAllocator)
      *
      * @param region
@@ -460,11 +476,20 @@ public class RegionSpace extends Space {
         return liveBytes;
     }
 
+    /**
+     * Author: Mahideep Tumati
+     * <p>
+     * Sort a hashmap based on value.
+     *
+     * @param Map of regions with key as start address and value as live/ dead bytes
+     * @return Map of regions sorted based on value
+     */
+
     public static Map<Address, Integer> sortAddressMapByValueDesc(Map<Address, Integer> addressMap) {
         List<Map.Entry<Address, Integer>> list =
                 new LinkedList<Map.Entry<Address, Integer>>(addressMap.entrySet());
         Collections.sort(list, new Comparator<Map.Entry<Address, Integer>>() {
-           @Override
+            @Override
             public int compare(Map.Entry<Address, Integer> o1,
                                Map.Entry<Address, Integer> o2) {
                 return (o2.getValue()).compareTo(o1.getValue());
@@ -476,6 +501,73 @@ public class RegionSpace extends Space {
             tempMap.put(address.getKey(), address.getValue());
         }
         return tempMap;
+    }
+
+    /**
+     * Author: Mahideep Tumati
+     * <p>
+     * Initiate linear scan on each and every region in collectionScan.
+     *
+     * @return
+     */
+    public static void linearScan() throws Exception {
+
+        try {
+            // linear scan on collection set
+            for (Address regionAddress : collectionSet) {
+                // scan individual region
+                scanTheRegion(regionAddress);
+            }
+
+        } catch (Exception e) {
+            throw e;
+        }
+
+    }
+
+    /**
+     * Author: Mahideep Tumati
+     * <p>
+     * linear scan/ evacuation an individual region .
+     *
+     * @param region start address
+     * @return
+     */
+    public static void scanTheRegion(Address regionAddress) throws Exception {
+
+        try {
+            // Fetch data end using start address
+            Address dataEnd = BumpPointer.getDataEnd(regionAddress);
+
+            // Check if offset is valid or not
+            ObjectReference currentObject = VM.objectModel.getObjectFromStartAddress(regionAddress.plus(DATA_START_OFFSET));
+
+            do {
+                /* Read end address first, as scan may be destructive */
+                Address currentObjectEnd = VM.objectModel.getObjectEndAddress(currentObject);
+
+                linearScanDriver.scan(currentObject);
+                if (currentObjectEnd.GE(dataEnd)) {
+                    /* We have scanned the last object */
+                    break;
+                }
+                /* Find the next object from the start address (dealing with alignment gaps, etc.) */
+                // change allocator
+                // check if Tracelocal obj correct or not
+                ObjectReference newObject = traceEvacuateObject(this, currentObject, 3);
+
+                // next object to scan
+                ObjectReference nextObj = VM.objectModel.getObjectFromStartAddress(currentObjectEnd);
+                if (VM.VERIFY_ASSERTIONS) {
+                    /* Must be monotonically increasing */
+                    VM.assertions._assert(nextObj.toAddress().GT(currentObject.toAddress()));
+                }
+                currentObject = nextObj;
+            } while (true);
+        } catch (Exception e) {
+            throw e;
+        }
+
     }
 
 }
