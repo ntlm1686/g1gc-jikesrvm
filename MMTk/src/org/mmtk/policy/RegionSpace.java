@@ -17,6 +17,10 @@ import org.vmmagic.unboxed.*;
 
 public class RegionSpace extends Space {
 
+    // Constraints
+    public static final int LOCAL_GC_BITS_REQUIRED = 2;
+    public static final int GC_HEADER_WORDS_REQUIRED = 0;
+
     public static final boolean HEADER_MARK_BITS = VM.config.HEADER_MARK_BITS;
     /**
      * highest bit bits we may use
