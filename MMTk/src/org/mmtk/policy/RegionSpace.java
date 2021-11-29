@@ -1,12 +1,10 @@
 package org.mmtk.policy;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.mmtk.utility.Constants.BYTES_IN_PAGE;
 
 import org.mmtk.plan.TransitiveClosure;
-import org.mmtk.utility.ForwardingWord;
 import org.mmtk.utility.*;
 import org.mmtk.utility.alloc.BumpPointer;
 import org.mmtk.utility.heap.*;
@@ -302,54 +300,6 @@ public class RegionSpace extends Space {
     @Inline
     public void evacuateRegion(Address region) {
         // TODO(optional) linear scan a region
-    }
-
-    /**
-     * Another full heap tracing. Copying all live objects in selected regions.
-     *
-     * @param trace
-     * @param object
-     * @param allocator
-     * @return return new object if moved, otherwise return original object
-     */
-    @Inline
-    public ObjectReference traceEvacuateObject(TransitiveClosure trace, ObjectReference object, int allocator) {
-        if (relocationRequired(regionOf(object))) {
-            Word forwardingWord = ForwardingWord.attemptToForward(object);
-            if (ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
-                // object is being forwarded by other thread, after it finished, return the copy
-                while (ForwardingWord.stateIsBeingForwarded(forwardingWord))
-                    forwardingWord = VM.objectModel.readAvailableBitsWord(object);
-                // no processNode since it's been pushed by other thread
-                return ForwardingWord.extractForwardingPointer(forwardingWord);
-            } else {
-                if (VM.VERIFY_ASSERTIONS)
-                    VM.assertions._assert(regionLiveBytes.get(regionOf(object)) != 0);
-
-                // object is not being forwarded, copy it
-                ObjectReference newObject = VM.objectModel.copy(object, allocator);
-                ForwardingWord.setForwardingPointer(object, newObject);
-                trace.processNode(newObject);
-
-                int newLiveBytes = regionLiveBytes.get(regionOf(object)) - sizeOf(object);
-                regionLiveBytes.put(regionOf(object), newLiveBytes);
-                if (newLiveBytes == 0) {
-                    // if new live bytes is 0, the region is empty, it's available again
-                    lock.acquire();
-                    availableRegionCount++;
-                    availableRegion.set(availableRegionCount, regionOf(object));
-                    lock.release();
-                }
-
-                return newObject;
-            }
-        } else {
-            if (testAndMark(object)) {
-                trace.processNode(object);
-            }
-        }
-        // object is not in the collection set
-        return object;
     }
 
     /**
