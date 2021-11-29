@@ -29,8 +29,8 @@ public class RegionAllocator extends Allocator {
     /** current contiguous region */
     protected Address region;
 
-    protected static final Offset DATA_END_OFFSET = Offset.zero();
-    protected static final Offset DATA_START_OFFSET = alignAllocationNoFill(
+    public static final Offset DATA_END_OFFSET = Offset.zero();
+    public static final Offset DATA_START_OFFSET = alignAllocationNoFill(
             Address.zero().plus(DATA_END_OFFSET.plus(BYTES_IN_ADDRESS)), MIN_ALIGNMENT, 0).toWord().toOffset();
 
     protected RegionAllocator(RegionSpace space) {

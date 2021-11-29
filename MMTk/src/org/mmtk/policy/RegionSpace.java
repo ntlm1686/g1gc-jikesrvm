@@ -34,7 +34,6 @@ public class RegionSpace extends Space {
      */
     public static final int DEFAULT_MARKCOUNT_BITS = 4;
     public static final int MAX_MARKCOUNT_BITS = AVAILABLE_LOCAL_BITS - COUNT_BASE;
-    private static final byte MARK_COUNT_INCREMENT = (byte) (1 << COUNT_BASE);
     private static final byte MARK_COUNT_MASK = (byte) (((1 << MAX_MARKCOUNT_BITS) - 1) << COUNT_BASE); // minus 1 for
     // copy/alloc
 
@@ -57,7 +56,6 @@ public class RegionSpace extends Space {
     protected final AddressArray consumedRegion = AddressArray.create(REGION_NUMBER);
 
     int availableRegionCount = 0;
-    int consumedRegionCount = 0;
 
     // Before we implement the metadata, we use a map instead
     protected static Map<Address, Integer> regionLiveBytes = new HashMap<Address, Integer>();
@@ -108,6 +106,9 @@ public class RegionSpace extends Space {
     public void release() {
         for (Address regionAddress : collectionSet) {
             release(regionAddress);
+            availableRegionCount++;
+            assert availableRegionCount < REGION_NUMBER;
+            availableRegion.set(availableRegionCount, regionAddress);
         }
     }
 
@@ -149,8 +150,6 @@ public class RegionSpace extends Space {
         }
         Address newRegion = availableRegion.get(availableRegionCount);
         availableRegionCount--;
-        consumedRegionCount++;
-        consumedRegion.set(consumedRegionCount, newRegion);
         lock.release();
         return newRegion;
     }
@@ -182,9 +181,9 @@ public class RegionSpace extends Space {
     private void initializeRegions() {
         for (int i = 0; i < REGION_NUMBER; i++) {
             Address region = addRegion();
+            availableRegionCount++;
             regionTable.set(i, region);
             availableRegion.set(i, region);
-            consumedRegion.set(i, Address.zero());
         }
         this.sortTable();
     }
@@ -292,7 +291,6 @@ public class RegionSpace extends Space {
     }
 
     public void updateDeadBytesInformation() {
-
         for (Map.Entry<Address, Integer> addressEntry : regionLiveBytes.entrySet()) {
             Address dataEnd = BumpPointer.getDataEnd(addressEntry.getKey());
             regionDeadBytes.put(addressEntry.getKey(), (dataEnd.toInt() - addressEntry.getKey().toInt()) - addressEntry.getValue());
