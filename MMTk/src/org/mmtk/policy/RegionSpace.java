@@ -278,12 +278,14 @@ public class RegionSpace extends Space {
 
         int totalAvailableBytes = REGION_SIZE * availableRegionCount;
 
+        int counter = 0;
         for (Map.Entry<Address, Integer> region : regionDeadBytes.entrySet()) {
-
-            if (regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
+            // if (regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
+            if (counter < availableRegionCount) {
                 collectionSet.add(region.getKey());
                 requireRelocation.put(region.getKey(), true);
                 totalAvailableBytes -= regionLiveBytes.get(region.getKey());
+                counter++;
             } else {
                 break;
             }
