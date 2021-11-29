@@ -33,20 +33,6 @@ public final class RegionTraceLocal extends TraceLocal {
     super(Region.ALLOC_RS, trace);
   }
 
-  @Inline
-  @Override
-  public void completeTrace() {
-    // Marking live objects
-    super.completeTrace();
-
-    // 1. update collection set
-    Region.regionSpace.updateCollectionSet();
-
-    // 2. perform scanning on collecting set(regions)
-    // TODO how to initialize another full heap scanning?
-    // Region.regionSpace.traceEvacuateObject();
-
-  }
 
   /****************************************************************************
    * Externally visible Object processing and tracing

@@ -94,7 +94,6 @@ public class RegionSpace extends Space {
 
     /**
      * Release allocated pages.
-     * // TODO how does releasePages() work?
      */
     @Override
     @Inline
@@ -107,7 +106,9 @@ public class RegionSpace extends Space {
      */
     @Inline
     public void release() {
-
+        for (Address regionAddress : collectionSet) {
+            release(regionAddress);
+        }
     }
 
     @Override
@@ -299,16 +300,6 @@ public class RegionSpace extends Space {
     }
 
     /**
-     * Evacuate a region using linear scan.
-     *
-     * @param region
-     */
-    @Inline
-    public void evacuateRegion(Address region) {
-        // TODO(optional) linear scan a region
-    }
-
-    /**
      * Atomically attempt to set the mark bit of an object.
      *
      * @param object
@@ -447,16 +438,13 @@ public class RegionSpace extends Space {
     }
 
     /**
-     * Author: Mahideep Tumati
-     * <p>
-     * Initiate linear scan on each and every region in collectionScan.
-     *
-     * @return
+     * Perform evacuation on this space, this method should be called
+     * by the global pool for now.
      */
     public void evacuation(int allocator)  {
-            for (Address regionAddress : collectionSet) {
-                this.scanTheRegion(regionAddress, allocator);
-            }
+        for (Address regionAddress : collectionSet) {
+            this.scanTheRegion(regionAddress, allocator);
+        }
     }
 
     /**

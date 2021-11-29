@@ -76,6 +76,8 @@ public class Region extends StopTheWorld {
       regionTrace.prepare();
     }
     if (phaseId == RELEASE) {
+      updateCollectionSet();
+      evacuate();
       regionSpace.release();
     }
     super.collectionPhase(phaseId);
@@ -100,11 +102,20 @@ public class Region extends StopTheWorld {
    * Miscellaneous
    */
 
-  // TODO
   @Interruptible
   @Override
   protected void registerSpecializedMethods() {
     TransitiveClosure.registerSpecializedScan(SCAN_RS, RegionTraceLocal.class);
     super.registerSpecializedMethods();
+  }
+
+  @Inline
+  public void updateCollectionSet() {
+    Region.regionSpace.updateCollectionSet();
+  }
+
+  @Inline
+  public void evacuate() {
+    Region.regionSpace.evacuation(Region.ALLOC_DEFAULT);
   }
 }
