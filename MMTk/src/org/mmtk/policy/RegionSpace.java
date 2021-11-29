@@ -1,14 +1,14 @@
 package org.mmtk.policy;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.mmtk.utility.Constants.BYTES_IN_PAGE;
+import static org.mmtk.utility.alloc.RegionAllocator.DATA_START_OFFSET;
 
 import org.mmtk.plan.TransitiveClosure;
-import org.mmtk.utility.ForwardingWord;
 import org.mmtk.utility.*;
 import org.mmtk.utility.alloc.BumpPointer;
+import org.mmtk.utility.alloc.RegionAllocator;
 import org.mmtk.utility.heap.*;
 import org.mmtk.vm.Lock;
 import org.mmtk.vm.VM;
@@ -74,6 +74,10 @@ public class RegionSpace extends Space {
     public RegionSpace(String name, VMRequest vmRequest) {
         this(name, true, vmRequest);
     }
+
+
+    // helps for linear scan
+    // Data must start particle-aligned.
 
     // private constructor
     private RegionSpace(String name, boolean zeroed, VMRequest vmRequest) {
@@ -288,7 +292,7 @@ public class RegionSpace extends Space {
 
     public void updateDeadBytesInformation() {
 
-        for (Map.Entry<Address, Integer> addressEntry :regionLiveBytes.entrySet()) {
+        for (Map.Entry<Address, Integer> addressEntry : regionLiveBytes.entrySet()) {
             Address dataEnd = BumpPointer.getDataEnd(addressEntry.getKey());
             regionDeadBytes.put(addressEntry.getKey(), (dataEnd.toInt() - addressEntry.getKey().toInt()) - addressEntry.getValue());
         }
@@ -302,54 +306,6 @@ public class RegionSpace extends Space {
     @Inline
     public void evacuateRegion(Address region) {
         // TODO(optional) linear scan a region
-    }
-
-    /**
-     * Another full heap tracing. Copying all live objects in selected regions.
-     *
-     * @param trace
-     * @param object
-     * @param allocator
-     * @return return new object if moved, otherwise return original object
-     */
-    @Inline
-    public ObjectReference traceEvacuateObject(TransitiveClosure trace, ObjectReference object, int allocator) {
-        if (relocationRequired(regionOf(object))) {
-            Word forwardingWord = ForwardingWord.attemptToForward(object);
-            if (ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
-                // object is being forwarded by other thread, after it finished, return the copy
-                while (ForwardingWord.stateIsBeingForwarded(forwardingWord))
-                    forwardingWord = VM.objectModel.readAvailableBitsWord(object);
-                // no processNode since it's been pushed by other thread
-                return ForwardingWord.extractForwardingPointer(forwardingWord);
-            } else {
-                if (VM.VERIFY_ASSERTIONS)
-                    VM.assertions._assert(regionLiveBytes.get(regionOf(object)) != 0);
-
-                // object is not being forwarded, copy it
-                ObjectReference newObject = VM.objectModel.copy(object, allocator);
-                ForwardingWord.setForwardingPointer(object, newObject);
-                trace.processNode(newObject);
-
-                int newLiveBytes = regionLiveBytes.get(regionOf(object)) - sizeOf(object);
-                regionLiveBytes.put(regionOf(object), newLiveBytes);
-                if (newLiveBytes == 0) {
-                    // if new live bytes is 0, the region is empty, it's available again
-                    lock.acquire();
-                    availableRegionCount++;
-                    availableRegion.set(availableRegionCount, regionOf(object));
-                    lock.release();
-                }
-
-                return newObject;
-            }
-        } else {
-            if (testAndMark(object)) {
-                trace.processNode(object);
-            }
-        }
-        // object is not in the collection set
-        return object;
     }
 
     /**
@@ -401,7 +357,7 @@ public class RegionSpace extends Space {
 
     /**
      * Look into the region's flag bits. collection set
-     * 
+     * <p>
      * (this can be implemented in RegionAllocator)
      *
      * @param region
@@ -463,11 +419,20 @@ public class RegionSpace extends Space {
         return liveBytes;
     }
 
+    /**
+     * Author: Mahideep Tumati
+     * <p>
+     * Sort a hashmap based on value.
+     *
+     * @param Map of regions with key as start address and value as live/ dead bytes
+     * @return Map of regions sorted based on value
+     */
+
     public static Map<Address, Integer> sortAddressMapByValueDesc(Map<Address, Integer> addressMap) {
         List<Map.Entry<Address, Integer>> list =
                 new LinkedList<Map.Entry<Address, Integer>>(addressMap.entrySet());
         Collections.sort(list, new Comparator<Map.Entry<Address, Integer>>() {
-           @Override
+            @Override
             public int compare(Map.Entry<Address, Integer> o1,
                                Map.Entry<Address, Integer> o2) {
                 return (o2.getValue()).compareTo(o1.getValue());
@@ -479,6 +444,56 @@ public class RegionSpace extends Space {
             tempMap.put(address.getKey(), address.getValue());
         }
         return tempMap;
+    }
+
+    /**
+     * Author: Mahideep Tumati
+     * <p>
+     * Initiate linear scan on each and every region in collectionScan.
+     *
+     * @return
+     */
+    public void evacuation(int allocator)  {
+            for (Address regionAddress : collectionSet) {
+                this.scanTheRegion(regionAddress, allocator);
+            }
+    }
+
+    /**
+     * Author: Mahideep Tumati
+     * <p>
+     * linear scan/ evacuation an individual region .
+     *
+     * @param region start address
+     * @return
+     */
+    public void scanTheRegion(Address regionAddress, int allocator) {
+        // Fetch data end using start address
+        Address dataEnd = RegionAllocator.getDataEnd(regionAddress);
+
+        // Check if offset is valid or not
+        ObjectReference currentObject = VM.objectModel.getObjectFromStartAddress(regionAddress.plus(DATA_START_OFFSET));
+        do {
+            /* Read end address first, as scan may be destructive */
+            Address currentObjectEnd = VM.objectModel.getObjectEndAddress(currentObject);
+
+            if (currentObjectEnd.GE(dataEnd)) {
+                /* We have scanned the last object */
+                break;
+            }
+
+            if (this.isLive(currentObject))
+                VM.objectModel.copy(currentObject, allocator);
+
+            // next object to scan
+            ObjectReference nextObj = VM.objectModel.getObjectFromStartAddress(currentObjectEnd);
+            if (VM.VERIFY_ASSERTIONS) {
+                /* Must be monotonically increasing */
+                VM.assertions._assert(nextObj.toAddress().GT(currentObject.toAddress()));
+            }
+            currentObject = nextObj;
+        } while (true);
+
     }
 
 }
