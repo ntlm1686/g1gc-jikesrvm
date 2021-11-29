@@ -5,6 +5,7 @@ import java.util.*;
 import static org.mmtk.utility.Constants.BYTES_IN_PAGE;
 import static org.mmtk.utility.alloc.RegionAllocator.DATA_START_OFFSET;
 
+import org.mmtk.utility.options.Options;
 import org.mmtk.plan.TransitiveClosure;
 import org.mmtk.utility.*;
 import org.mmtk.utility.alloc.BumpPointer;
@@ -34,6 +35,7 @@ public class RegionSpace extends Space {
      */
     public static final int DEFAULT_MARKCOUNT_BITS = 4;
     public static final int MAX_MARKCOUNT_BITS = AVAILABLE_LOCAL_BITS - COUNT_BASE;
+    private static final byte MARK_COUNT_INCREMENT = (byte) (1 << COUNT_BASE);
     private static final byte MARK_COUNT_MASK = (byte) (((1 << MAX_MARKCOUNT_BITS) - 1) << COUNT_BASE); // minus 1 for
     // copy/alloc
 
@@ -132,7 +134,9 @@ public class RegionSpace extends Space {
      * Prepare for the next GC.
      */
     public void prepare() {
-        // TODO important
+        // flip the mark bit
+        allocState = markState;
+        markState = deltaMarkState(true);
     }
 
     /**
@@ -318,6 +322,20 @@ public class RegionSpace extends Space {
         VM.objectModel.writeAvailableByte(object, newValue);
         return true;
     }
+
+  /**
+   * Return the mark state incremented or decremented by one.
+   *
+   * @param increment If true, then return the incremented value else return the decremented value
+   * @return the mark state incremented or decremented by one.
+   */
+  private byte deltaMarkState(boolean increment) {
+    byte mask = (byte) (((1 << Options.markSweepMarkBits.getValue()) - 1) << COUNT_BASE);
+    byte rtn = (byte) (increment ? markState + MARK_COUNT_INCREMENT : markState - MARK_COUNT_INCREMENT);
+    rtn &= mask;
+    if (VM.VERIFY_ASSERTIONS) VM.assertions._assert((markState & ~MARK_COUNT_MASK) == 0);
+    return rtn;
+  }
 
     /**
      * Perform any required initialization of the GC portion of the header.
