@@ -1,25 +1,19 @@
 package org.mmtk.policy;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.mmtk.utility.Constants.BYTES_IN_PAGE;
+import static org.mmtk.utility.alloc.RegionAllocator.DATA_START_OFFSET;
 
 import org.mmtk.plan.TransitiveClosure;
-import org.mmtk.utility.ForwardingWord;
 import org.mmtk.utility.*;
 import org.mmtk.utility.alloc.BumpPointer;
+import org.mmtk.utility.alloc.RegionAllocator;
 import org.mmtk.utility.heap.*;
 import org.mmtk.vm.Lock;
 import org.mmtk.vm.VM;
 import org.vmmagic.pragma.Inline;
 import org.vmmagic.unboxed.*;
-
-// below imports are added for linearscan
-import static org.mmtk.utility.Constants.BYTES_IN_ADDRESS;
-
-import org.mmtk.utility.gcspy.drivers.LinearSpaceDriver;
-
 
 public class RegionSpace extends Space {
 
@@ -77,14 +71,9 @@ public class RegionSpace extends Space {
         this(name, true, vmRequest);
     }
 
-    static LinearSpaceDriver linearScanDriver;
-
 
     // helps for linear scan
     // Data must start particle-aligned.
-    protected static final Offset DATA_START_OFFSET = alignAllocationNoFill(
-            Address.zero().plus(DATA_END_OFFSET.plus(BYTES_IN_ADDRESS)),
-            MIN_ALIGNMENT, 0).toWord().toOffset();
 
     // private constructor
     private RegionSpace(String name, boolean zeroed, VMRequest vmRequest) {
@@ -316,44 +305,6 @@ public class RegionSpace extends Space {
     }
 
     /**
-     * Another full heap tracing. Copying all live objects in selected regions.
-     *
-     * @param trace
-     * @param object
-     * @param allocator
-     * @return return new object if moved, otherwise return original object
-     */
-    @Inline
-    public ObjectReference traceEvacuateObject(TraceLocal trace, ObjectReference object, int allocator) {
-
-        Word forwardingWord = ForwardingWord.attemptToForward(object);
-
-        if (ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
-            return ForwardingWord.spinAndGetForwardedObject(forwardingWord);
-        } else {
-            if (VM.VERIFY_ASSERTIONS)
-                VM.assertions._assert(regionLiveBytes.get(regionOf(object)) != 0);
-
-            ObjectReference newObject = ForwardingWord.forwardObject(object, allocator);
-
-            trace.processNode(newObject);
-
-            // TODO lock
-            int newLiveBytes = regionLiveBytes.get(regionOf(object)) - sizeOf(object);
-            regionLiveBytes.put(regionOf(object), newLiveBytes);
-            if (newLiveBytes == 0) {
-                // if new live bytes is 0, the region is empty, it's available again
-                lock.acquire();
-                availableRegionCount++;
-                availableRegion.set(availableRegionCount, regionOf(object));
-                lock.release();
-            }
-
-            return newObject;
-        }
-    }
-
-    /**
      * Atomically attempt to set the mark bit of an object.
      *
      * @param object
@@ -498,11 +449,9 @@ public class RegionSpace extends Space {
      *
      * @return
      */
-    public static void linearScan()  {
-            // linear scan on collection set
+    public void evacuation(int allocator)  {
             for (Address regionAddress : collectionSet) {
-                // scan individual region
-                scanTheRegion(regionAddress);
+                this.scanTheRegion(regionAddress, allocator);
             }
     }
 
@@ -514,14 +463,12 @@ public class RegionSpace extends Space {
      * @param region start address
      * @return
      */
-    public static void scanTheRegion(Address regionAddress) {
+    public void scanTheRegion(Address regionAddress, int allocator) {
         // Fetch data end using start address
-        Address dataEnd = BumpPointer.getDataEnd(regionAddress);
+        Address dataEnd = RegionAllocator.getDataEnd(regionAddress);
 
         // Check if offset is valid or not
         ObjectReference currentObject = VM.objectModel.getObjectFromStartAddress(regionAddress.plus(DATA_START_OFFSET));
-       // Properly send the arguments
-        TraceLocal traceLocal = new TraceLocal(new Trace());
         do {
             /* Read end address first, as scan may be destructive */
             Address currentObjectEnd = VM.objectModel.getObjectEndAddress(currentObject);
@@ -531,13 +478,8 @@ public class RegionSpace extends Space {
                 break;
             }
 
-            if (isLive(currentObject)) {
-                linearScanDriver.scan(currentObject);
-                /* Find the next object from the start address (dealing with alignment gaps, etc.) */
-                // change allocator
-                // allocator needs to be proper.
-                traceEvacuateObject(traceLocal, currentObject, 3);
-            }
+            if (this.isLive(currentObject))
+                VM.objectModel.copy(currentObject, allocator);
 
             // next object to scan
             ObjectReference nextObj = VM.objectModel.getObjectFromStartAddress(currentObjectEnd);
