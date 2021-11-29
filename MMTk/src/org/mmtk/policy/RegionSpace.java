@@ -19,7 +19,6 @@ import org.vmmagic.unboxed.*;
 import static org.mmtk.utility.Constants.BYTES_IN_ADDRESS;
 
 import org.mmtk.utility.gcspy.drivers.LinearSpaceDriver;
-import org.mmtk.plan.TransitiveClosure;
 
 
 public class RegionSpace extends Space {
@@ -325,44 +324,33 @@ public class RegionSpace extends Space {
      * @return return new object if moved, otherwise return original object
      */
     @Inline
-    public ObjectReference traceEvacuateObject(TransitiveClosure trace, ObjectReference object, int allocator) {
-        if (relocationRequired(regionOf(object))) {
-            Word forwardingWord = ForwardingWord.attemptToForward(object);
-            if (ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
-                // object is being forwarded by other thread, after it finished, return the copy
-                while (ForwardingWord.stateIsBeingForwarded(forwardingWord))
-                    forwardingWord = VM.objectModel.readAvailableBitsWord(object);
-                // no processNode since it's been pushed by other thread
-                return ForwardingWord.extractForwardingPointer(forwardingWord);
-            } else {
-                if (VM.VERIFY_ASSERTIONS)
-                    VM.assertions._assert(regionLiveBytes.get(regionOf(object)) != 0);
+    public ObjectReference traceEvacuateObject(TraceLocal trace, ObjectReference object, int allocator) {
 
-                // object is not being forwarded, copy it
-                ObjectReference newObject = VM.objectModel.copy(object, allocator);
-                ForwardingWord.setForwardingPointer(object, newObject);
-                trace.processNode(newObject);
+        Word forwardingWord = ForwardingWord.attemptToForward(object);
 
-                // TODO lock
-                int newLiveBytes = regionLiveBytes.get(regionOf(object)) - sizeOf(object);
-                regionLiveBytes.put(regionOf(object), newLiveBytes);
-                if (newLiveBytes == 0) {
-                    // if new live bytes is 0, the region is empty, it's available again
-                    lock.acquire();
-                    availableRegionCount++;
-                    availableRegion.set(availableRegionCount, regionOf(object));
-                    lock.release();
-                }
-
-                return newObject;
-            }
+        if (ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
+            return ForwardingWord.spinAndGetForwardedObject(forwardingWord);
         } else {
-            if (testAndMark(object)) {
-                trace.processNode(object);
+            if (VM.VERIFY_ASSERTIONS)
+                VM.assertions._assert(regionLiveBytes.get(regionOf(object)) != 0);
+
+            ObjectReference newObject = ForwardingWord.forwardObject(object, allocator);
+
+            trace.processNode(newObject);
+
+            // TODO lock
+            int newLiveBytes = regionLiveBytes.get(regionOf(object)) - sizeOf(object);
+            regionLiveBytes.put(regionOf(object), newLiveBytes);
+            if (newLiveBytes == 0) {
+                // if new live bytes is 0, the region is empty, it's available again
+                lock.acquire();
+                availableRegionCount++;
+                availableRegion.set(availableRegionCount, regionOf(object));
+                lock.release();
             }
+
+            return newObject;
         }
-        // object is not in the collection set
-        return object;
     }
 
     /**
@@ -510,19 +498,12 @@ public class RegionSpace extends Space {
      *
      * @return
      */
-    public static void linearScan() throws Exception {
-
-        try {
+    public static void linearScan()  {
             // linear scan on collection set
             for (Address regionAddress : collectionSet) {
                 // scan individual region
                 scanTheRegion(regionAddress);
             }
-
-        } catch (Exception e) {
-            throw e;
-        }
-
     }
 
     /**
@@ -533,40 +514,39 @@ public class RegionSpace extends Space {
      * @param region start address
      * @return
      */
-    public static void scanTheRegion(Address regionAddress) throws Exception {
+    public static void scanTheRegion(Address regionAddress) {
+        // Fetch data end using start address
+        Address dataEnd = BumpPointer.getDataEnd(regionAddress);
 
-        try {
-            // Fetch data end using start address
-            Address dataEnd = BumpPointer.getDataEnd(regionAddress);
+        // Check if offset is valid or not
+        ObjectReference currentObject = VM.objectModel.getObjectFromStartAddress(regionAddress.plus(DATA_START_OFFSET));
+       // Properly send the arguments
+        TraceLocal traceLocal = new TraceLocal(new Trace());
+        do {
+            /* Read end address first, as scan may be destructive */
+            Address currentObjectEnd = VM.objectModel.getObjectEndAddress(currentObject);
 
-            // Check if offset is valid or not
-            ObjectReference currentObject = VM.objectModel.getObjectFromStartAddress(regionAddress.plus(DATA_START_OFFSET));
+            if (currentObjectEnd.GE(dataEnd)) {
+                /* We have scanned the last object */
+                break;
+            }
 
-            do {
-                /* Read end address first, as scan may be destructive */
-                Address currentObjectEnd = VM.objectModel.getObjectEndAddress(currentObject);
-
+            if (isLive(currentObject)) {
                 linearScanDriver.scan(currentObject);
-                if (currentObjectEnd.GE(dataEnd)) {
-                    /* We have scanned the last object */
-                    break;
-                }
                 /* Find the next object from the start address (dealing with alignment gaps, etc.) */
                 // change allocator
-                // check if Tracelocal obj correct or not
-                ObjectReference newObject = traceEvacuateObject(this, currentObject, 3);
+                // allocator needs to be proper.
+                traceEvacuateObject(traceLocal, currentObject, 3);
+            }
 
-                // next object to scan
-                ObjectReference nextObj = VM.objectModel.getObjectFromStartAddress(currentObjectEnd);
-                if (VM.VERIFY_ASSERTIONS) {
-                    /* Must be monotonically increasing */
-                    VM.assertions._assert(nextObj.toAddress().GT(currentObject.toAddress()));
-                }
-                currentObject = nextObj;
-            } while (true);
-        } catch (Exception e) {
-            throw e;
-        }
+            // next object to scan
+            ObjectReference nextObj = VM.objectModel.getObjectFromStartAddress(currentObjectEnd);
+            if (VM.VERIFY_ASSERTIONS) {
+                /* Must be monotonically increasing */
+                VM.assertions._assert(nextObj.toAddress().GT(currentObject.toAddress()));
+            }
+            currentObject = nextObj;
+        } while (true);
 
     }
 
