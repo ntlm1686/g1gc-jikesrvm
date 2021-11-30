@@ -62,9 +62,6 @@ public class Region extends StopTheWorld {
    * Collection
    */
 
-  /**
-   * {@inheritDoc}
-   */
   @Inline
   @Override
   public final void collectionPhase(short phaseId) {
