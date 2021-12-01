@@ -44,16 +44,21 @@ public class RegionCollector extends StopTheWorldCollector {
    */
 
   private final RegionTraceLocal trace; // = new RegionTraceLocal(global().regionTrace);
+  private final RegionEvacuateLocal eva;
   protected final RegionLocal rl;
 
   /**
    * Constructor
    */
   public RegionCollector() {
-    this(new RegionTraceLocal(global().regionTrace));
+    this(
+      new RegionTraceLocal(global().regionTrace),
+      new RegionEvacuateLocal(global().evaTrace)
+      );
   }
 
-  public RegionCollector(RegionTraceLocal trace) {
+  public RegionCollector(RegionTraceLocal trace, RegionEvacuateLocal eva) {
+    this.eva = eva;
     this.trace = trace;
     this.rl = new RegionLocal(Region.regionSpace);
   }
@@ -77,8 +82,14 @@ public class RegionCollector extends StopTheWorldCollector {
       return;
     }
 
+    if (phaseId == Region.EVACUATE) {
+      eva.completeTrace();
+      return;
+    }
+
     if (phaseId == Region.RELEASE) {
       trace.release();
+      eva.release();
     }
 
     super.collectionPhase(phaseId, primary);

@@ -184,7 +184,6 @@ public abstract class TraceLocal extends TransitiveClosure {
     }
   }
 
-
   /****************************************************************************
    *
    * Externally visible Object processing and tracing

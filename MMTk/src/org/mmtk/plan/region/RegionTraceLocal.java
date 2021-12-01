@@ -30,9 +30,8 @@ public final class RegionTraceLocal extends TraceLocal {
    * @param trace the associated global trace
    */
   public RegionTraceLocal(Trace trace) {
-    super(Region.ALLOC_RS, trace);
+    super(Region.SCAN_RS, trace);
   }
-
 
   /****************************************************************************
    * Externally visible Object processing and tracing

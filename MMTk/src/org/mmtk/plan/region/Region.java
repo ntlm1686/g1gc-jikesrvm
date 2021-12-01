@@ -20,7 +20,6 @@ import org.mmtk.utility.heap.VMRequest;
 import org.vmmagic.pragma.*;
 import org.vmmagic.unboxed.Extent;
 
-
 /**
  * This class implements the global state of a a simple allocator
  * without a collector.
@@ -29,8 +28,25 @@ import org.vmmagic.unboxed.Extent;
 public class Region extends StopTheWorld {
 
 
+  public static final short UPDATE_COLLECTION_SET = Phase.createSimple("update-collection-set");
+  public static final short EVACUATE = Phase.createSimple("evacuate");
+
+
+  public short collection = Phase.createComplex("collection", null,
+      Phase.scheduleComplex(initPhase),
+      Phase.scheduleComplex(rootClosurePhase),
+      Phase.scheduleComplex(refTypeClosurePhase),
+
+      Phase.scheduleGlobal(UPDATE_COLLECTION_SET),
+      Phase.scheduleCollector(EVACUATE),
+
+      Phase.scheduleComplex(forwardPhase),
+      Phase.scheduleComplex(completeClosurePhase),
+      Phase.scheduleComplex(finishPhase));
+
   private static final int NET_META_DATA_BYTES_PER_REGION = 0;
-  protected static final int META_DATA_PAGES_PER_REGION_WITH_BITMAP = Conversions.bytesToPages(Extent.fromIntSignExtend(NET_META_DATA_BYTES_PER_REGION));
+  protected static final int META_DATA_PAGES_PER_REGION_WITH_BITMAP = Conversions
+      .bytesToPages(Extent.fromIntSignExtend(NET_META_DATA_BYTES_PER_REGION));
 
   /*****************************************************************************
    * Class variables
@@ -47,37 +63,43 @@ public class Region extends StopTheWorld {
    */
 
   public final Trace regionTrace;
+  public final Trace evaTrace;
 
   public static final int ALLOC_RS = Plan.ALLOC_DEFAULT;
   public static final int SCAN_RS = 0;
+  public static final int EVA_RS = 1;
 
   /**
    * Constructor
    */
   public Region() {
     regionTrace = new Trace(metaDataSpace);
+    evaTrace = new Trace(metaDataSpace);
   }
 
   /*****************************************************************************
    * Collection
    */
 
-  /**
-   * {@inheritDoc}
-   */
   @Inline
   @Override
   public final void collectionPhase(short phaseId) {
     if (phaseId == PREPARE) {
       regionSpace.prepare();
       regionTrace.prepare();
+      evaTrace.prepare();
     }
     if (phaseId == CLOSURE) {
       regionTrace.prepare();
-    }
-    if (phaseId == RELEASE) {
+      evaTrace.prepare();
       updateCollectionSet();
-      evacuate();
+    }
+
+    if (phaseId == UPDATE_COLLECTION_SET) {
+      updateCollectionSet();
+    }
+
+    if (phaseId == RELEASE) {
       regionSpace.release();
     }
     super.collectionPhase(phaseId);
@@ -97,7 +119,6 @@ public class Region extends StopTheWorld {
     return (regionSpace.reservedPages() + super.getPagesUsed());
   }
 
-
   /*****************************************************************************
    * Miscellaneous
    */
@@ -106,16 +127,12 @@ public class Region extends StopTheWorld {
   @Override
   protected void registerSpecializedMethods() {
     TransitiveClosure.registerSpecializedScan(SCAN_RS, RegionTraceLocal.class);
+    TransitiveClosure.registerSpecializedScan(EVA_RS, RegionEvacuateLocal.class);
     super.registerSpecializedMethods();
   }
 
   @Inline
   public void updateCollectionSet() {
     Region.regionSpace.updateCollectionSet();
-  }
-
-  @Inline
-  public void evacuate() {
-    Region.regionSpace.evacuation(Region.ALLOC_DEFAULT);
   }
 }
