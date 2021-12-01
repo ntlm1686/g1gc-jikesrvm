@@ -90,9 +90,7 @@ public class Region extends StopTheWorld {
       evaTrace.prepare();
     }
     if (phaseId == CLOSURE) {
-      regionTrace.prepare();
-      evaTrace.prepare();
-      updateCollectionSet();
+      ;
     }
 
     if (phaseId == UPDATE_COLLECTION_SET) {
