@@ -75,7 +75,6 @@ public class RegionSpace extends Space {
         this(name, true, vmRequest);
     }
 
-
     // helps for linear scan
     // Data must start particle-aligned.
 
@@ -137,6 +136,13 @@ public class RegionSpace extends Space {
         // flip the mark bit
         allocState = markState;
         markState = deltaMarkState(true);
+
+        // reset the regions' info
+        resetRegionLiveBytes();
+        resetRequireRelocation();
+        resetRegionDeadBytes();
+
+        collectionSet.clear();
     }
 
     /**
@@ -299,7 +305,8 @@ public class RegionSpace extends Space {
     public void updateDeadBytesInformation() {
         for (Map.Entry<Address, Integer> addressEntry : regionLiveBytes.entrySet()) {
             Address dataEnd = BumpPointer.getDataEnd(addressEntry.getKey());
-            regionDeadBytes.put(addressEntry.getKey(), (dataEnd.toInt() - addressEntry.getKey().toInt()) - addressEntry.getValue());
+            regionDeadBytes.put(addressEntry.getKey(),
+                    (dataEnd.toInt() - addressEntry.getKey().toInt()) - addressEntry.getValue());
         }
     }
 
@@ -323,19 +330,21 @@ public class RegionSpace extends Space {
         return true;
     }
 
-  /**
-   * Return the mark state incremented or decremented by one.
-   *
-   * @param increment If true, then return the incremented value else return the decremented value
-   * @return the mark state incremented or decremented by one.
-   */
-  private byte deltaMarkState(boolean increment) {
-    byte mask = (byte) (((1 << Options.markSweepMarkBits.getValue()) - 1) << COUNT_BASE);
-    byte rtn = (byte) (increment ? markState + MARK_COUNT_INCREMENT : markState - MARK_COUNT_INCREMENT);
-    rtn &= mask;
-    if (VM.VERIFY_ASSERTIONS) VM.assertions._assert((markState & ~MARK_COUNT_MASK) == 0);
-    return rtn;
-  }
+    /**
+     * Return the mark state incremented or decremented by one.
+     *
+     * @param increment If true, then return the incremented value else return the
+     *                  decremented value
+     * @return the mark state incremented or decremented by one.
+     */
+    private byte deltaMarkState(boolean increment) {
+        byte mask = (byte) (((1 << Options.markSweepMarkBits.getValue()) - 1) << COUNT_BASE);
+        byte rtn = (byte) (increment ? markState + MARK_COUNT_INCREMENT : markState - MARK_COUNT_INCREMENT);
+        rtn &= mask;
+        if (VM.VERIFY_ASSERTIONS)
+            VM.assertions._assert((markState & ~MARK_COUNT_MASK) == 0);
+        return rtn;
+    }
 
     /**
      * Perform any required initialization of the GC portion of the header.
@@ -394,6 +403,17 @@ public class RegionSpace extends Space {
     }
 
     /**
+     * Set all regions' dead bytes to 0. (may not necessary)
+     */
+    @Inline
+    private void resetRegionDeadBytes() {
+        // assert regionTable has been initialized
+        for (int i = 0; i < REGION_NUMBER; i++) {
+            regionDeadBytes.put(regionTable.get(i), 0);
+        }
+    }
+
+    /**
      * All regions do not require relocation.
      */
     @Inline
@@ -437,12 +457,11 @@ public class RegionSpace extends Space {
      * @return Map of regions sorted based on value
      */
     public static Map<Address, Integer> sortAddressMapByValueDesc(Map<Address, Integer> addressMap) {
-        List<Map.Entry<Address, Integer>> list =
-                new LinkedList<Map.Entry<Address, Integer>>(addressMap.entrySet());
+        List<Map.Entry<Address, Integer>> list = new LinkedList<Map.Entry<Address, Integer>>(addressMap.entrySet());
         Collections.sort(list, new Comparator<Map.Entry<Address, Integer>>() {
             @Override
             public int compare(Map.Entry<Address, Integer> o1,
-                               Map.Entry<Address, Integer> o2) {
+                    Map.Entry<Address, Integer> o2) {
                 return (o2.getValue()).compareTo(o1.getValue());
             }
         });
@@ -458,7 +477,7 @@ public class RegionSpace extends Space {
      * Perform evacuation on this space, this method should be called
      * by the global pool for now.
      */
-    public void evacuation(int allocator)  {
+    public void evacuation(int allocator) {
         for (Address regionAddress : collectionSet) {
             this.scanTheRegion(regionAddress, allocator);
         }
