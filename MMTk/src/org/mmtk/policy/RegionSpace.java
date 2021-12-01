@@ -280,7 +280,7 @@ public class RegionSpace extends Space {
         updateDeadBytesInformation();
         regionDeadBytes = sortAddressMapByValueDesc(regionDeadBytes);
 
-        int totalAvailableBytes = REGION_SIZE * availableRegionCount;
+        // int totalAvailableBytes = REGION_SIZE * availableRegionCount;
 
         int counter = 0;
         for (Map.Entry<Address, Integer> region : regionDeadBytes.entrySet()) {
@@ -288,7 +288,7 @@ public class RegionSpace extends Space {
             if (counter < availableRegionCount) {
                 collectionSet.add(region.getKey());
                 requireRelocation.put(region.getKey(), true);
-                totalAvailableBytes -= regionLiveBytes.get(region.getKey());
+                // totalAvailableBytes -= regionLiveBytes.get(region.getKey());
                 counter++;
             } else {
                 break;
@@ -378,7 +378,7 @@ public class RegionSpace extends Space {
     }
 
     @Inline
-    private boolean relocationRequired(ObjectReference object) {
+    public boolean relocationRequired(ObjectReference object) {
         return relocationRequired(regionOf(object));
     }
 
@@ -436,7 +436,6 @@ public class RegionSpace extends Space {
      * @param Map of regions with key as start address and value as live/ dead bytes
      * @return Map of regions sorted based on value
      */
-
     public static Map<Address, Integer> sortAddressMapByValueDesc(Map<Address, Integer> addressMap) {
         List<Map.Entry<Address, Integer>> list =
                 new LinkedList<Map.Entry<Address, Integer>>(addressMap.entrySet());
@@ -499,7 +498,52 @@ public class RegionSpace extends Space {
             }
             currentObject = nextObj;
         } while (true);
-
     }
 
+    /**
+     * Another full heap tracing. Copying all live objects in selected regions.
+     *
+     * @param trace
+     * @param object
+     * @param allocator
+     * @return return new object if moved, otherwise return original object
+     */
+    @Inline
+    public ObjectReference traceEvacuateObject(TransitiveClosure trace, ObjectReference object, int allocator) {
+        if (relocationRequired(regionOf(object))) {
+            Word forwardingWord = ForwardingWord.attemptToForward(object);
+            if (ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
+                while (ForwardingWord.stateIsBeingForwarded(forwardingWord))
+                    forwardingWord = VM.objectModel.readAvailableBitsWord(object);
+                return ForwardingWord.extractForwardingPointer(forwardingWord);
+            } else {
+                if (VM.VERIFY_ASSERTIONS)
+                    VM.assertions._assert(regionLiveBytes.get(regionOf(object)) != 0);
+
+                // object is not being forwarded, copy it
+                ObjectReference newObject = VM.objectModel.copy(object, allocator);
+                ForwardingWord.setForwardingPointer(object, newObject);
+                trace.processNode(newObject);
+
+                // TODO per region lock?
+                int newLiveBytes = regionLiveBytes.get(regionOf(object)) - sizeOf(object);
+                regionLiveBytes.put(regionOf(object), newLiveBytes);
+                if (newLiveBytes == 0) {
+                    // if new live bytes is 0, the region is empty, it's available again
+                    lock.acquire();
+                    availableRegionCount++;
+                    availableRegion.set(availableRegionCount, regionOf(object));
+                    lock.release();
+                }
+                return newObject;
+            }
+        } else {
+            Word forwardingWord = ForwardingWord.attemptToForward(object);
+            if (!ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
+                trace.processNode(object);
+            }
+        }
+        // object is not in the collection set
+        return object;
+    }
 }
