@@ -15,7 +15,7 @@ import org.vmmagic.unboxed.*;
 public class RegionEvacuateLocal extends TraceLocal {
 
     public RegionEvacuateLocal(Trace trace) {
-        super(Region.ALLOC_RS, trace);
+        super(Region.EVA_RS, trace);
     }
 
     /****************************************************************************
