@@ -28,11 +28,4 @@ public final class AddressArray {
   public int length() {
     return 0;
   }
-
-  public Address[] getAll() {
-    return null;
-  }
-
-  public void setAll(Address[] data) {
-  }
 }
