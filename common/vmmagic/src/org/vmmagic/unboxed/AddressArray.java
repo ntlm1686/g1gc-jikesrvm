@@ -32,13 +32,6 @@ public final class AddressArray {
   }
 
   public Address[] sort() {
-    Address[] sorted = data.clone();
-    Arrays.sort(sorted, new Comparator<Address>() {
-      @Override
-      public int compare(Address X, Address Y) {
-          return X.toInt() - Y.toInt();
-      }
-    });
-    return sorted;
+    return null;
   }
 }
