@@ -176,13 +176,11 @@ public class RegionSpace extends Space {
     private void sortTable() {
         AddressArray sortedRegionTable = AddressArray.create(REGION_NUMBER);
         for (int i = 0; i < REGION_NUMBER; i++) {
-            Address regionAddress = regionTable.get(i);
-            sortedRegionTable.set(i, regionAddress);
+            sortedRegionTable.set(i, regionTable.get(i));
         }
         sortedRegionTable.sort();
         for (int i = 0; i < REGION_NUMBER; i++) {
-            Address regionAddress = sortedRegionTable.get(i);
-            regionTable.set(i, regionAddress);
+            regionTable.set(i, sortedRegionTable.get(i));
         }
     }
 
@@ -200,8 +198,8 @@ public class RegionSpace extends Space {
         this.sortTable();
     }
 
-    private boolean isRegionIdeal(Address X, Address Y) {
-        return (X.toInt() < Y.toInt()) && (X.toInt() + REGION_SIZE >= Y.toInt());
+    private boolean isRegionIdeal(int X, int Y) {
+        return (X < Y) && (X + REGION_SIZE >= Y);
     }
 
     private Address idealRegion(Address address) {
@@ -209,7 +207,7 @@ public class RegionSpace extends Space {
         int right = regionTable.length() - 1;
         while (left <= right) {
             int mid = (left + right) >>> 1;
-            if (this.isRegionIdeal(regionTable.get(mid), address)) {
+            if (this.isRegionIdeal(regionTable.get(mid).toInt(), address.toInt())) {
                 return regionTable.get(mid);
             }
             if (regionTable.get(mid).toInt() > address.toInt()) {
