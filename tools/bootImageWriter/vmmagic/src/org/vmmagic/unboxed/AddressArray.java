@@ -15,6 +15,7 @@ package org.vmmagic.unboxed;
 import org.vmmagic.pragma.*;
 import org.jikesrvm.VM;
 import org.jikesrvm.objectmodel.RuntimeTable;
+import java.util.*;
 
 import java.util.*;
 
@@ -68,7 +69,7 @@ public final class AddressArray implements RuntimeTable<Address> {
   }
 
   @Inline
-  public Address[] sort() {
+  public void sort() {
     Address[] sorted = data;
     Arrays.sort(sorted, new Comparator<Address>() {
       @Override
@@ -76,7 +77,8 @@ public final class AddressArray implements RuntimeTable<Address> {
           return X.toInt() - Y.toInt();
       }
     });
-    return sorted;
+    for (int i = 0 ; i < sorted.length; i++) {
+      data[i] = sorted[i];
+    }
   }
-
 }

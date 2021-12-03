@@ -31,7 +31,6 @@ public final class AddressArray {
     return 0;
   }
 
-  public Address[] sort() {
-    return null;
+  public void sort() {
   }
 }

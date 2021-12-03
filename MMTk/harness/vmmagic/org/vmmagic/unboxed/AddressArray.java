@@ -42,14 +42,17 @@ public final class AddressArray {
     return data.length;
   }
 
-  public Address[] sort() {
-    Address[] sorted = data.clone();
+
+  public void sort() {
+    Address[] sorted = data;
     Arrays.sort(sorted, new Comparator<Address>() {
       @Override
       public int compare(Address X, Address Y) {
           return X.toInt() - Y.toInt();
       }
     });
-    return sorted;
+    for (int i = 0 ; i < sorted.length; i++) {
+      data[i] = sorted[i];
+    }
   }
 }

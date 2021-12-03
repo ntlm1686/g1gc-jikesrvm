@@ -174,9 +174,15 @@ public class RegionSpace extends Space {
     }
 
     private void sortTable() {
-        Address[] buffer = regionTable.sort();
-        for (int i = 0; i < buffer.length; i++) {
-            regionTable.set(i, buffer[i]);
+        AddressArray sortedRegionTable = AddressArray.create(REGION_NUMBER);
+        for (int i = 0; i < REGION_NUMBER; i++) {
+            Address regionAddress = regionTable.get(i);
+            sortedRegionTable.set(i, regionAddress);
+        }
+        sortedRegionTable.sort();
+        for (int i = 0; i < REGION_NUMBER; i++) {
+            Address regionAddress = sortedRegionTable.get(i);
+            regionTable.set(i, regionAddress);
         }
     }
 
@@ -198,17 +204,17 @@ public class RegionSpace extends Space {
         return (X.toInt() < Y.toInt()) && (X.toInt() + REGION_SIZE >= Y.toInt());
     }
 
-    private Address idealRegion(Address[] table, Address address) {
+    private Address idealRegion(Address address) {
         int left = 0;
-        int right = table.length - 1;
+        int right = regionTable.length() - 1;
         while (left <= right) {
             int mid = (left + right) >>> 1;
-            if (this.isRegionIdeal(table[mid], address)) {
-                return table[mid];
+            if (this.isRegionIdeal(regionTable.get(mid), address)) {
+                return regionTable.get(mid);
             }
-            if (table[mid].toInt() > address.toInt()) {
+            if (regionTable.get(mid).toInt() > address.toInt()) {
                 right = mid - 1;
-            } else if (table[mid].toInt() + REGION_SIZE < address.toInt()) {
+            } else if (regionTable.get(mid).toInt() + REGION_SIZE < address.toInt()) {
                 left = mid + 1;
             }
         }
@@ -224,11 +230,7 @@ public class RegionSpace extends Space {
     @Inline
     public Address regionOf(ObjectReference object) {
         Address address = object.toAddress();
-        Address[] table = new Address[regionTable.length()];
-        for (int i = 0; i < regionTable.length(); i++) {
-            table[i] = regionTable.get(i);
-        }
-        return this.idealRegion(table, address);
+        return this.idealRegion(address);
     }
 
     /**
