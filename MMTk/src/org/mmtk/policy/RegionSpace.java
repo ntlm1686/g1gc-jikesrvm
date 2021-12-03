@@ -204,17 +204,17 @@ public class RegionSpace extends Space {
         return (X.toInt() < Y.toInt()) && (X.toInt() + REGION_SIZE >= Y.toInt());
     }
 
-    private Address idealRegion(Address[] table, Address address) {
+    private Address idealRegion(Address address) {
         int left = 0;
-        int right = table.length - 1;
+        int right = regionTable.length() - 1;
         while (left <= right) {
             int mid = (left + right) >>> 1;
-            if (this.isRegionIdeal(table[mid], address)) {
-                return table[mid];
+            if (this.isRegionIdeal(regionTable.get(mid), address)) {
+                return regionTable.get(mid);
             }
-            if (table[mid].toInt() > address.toInt()) {
+            if (regionTable.get(mid).toInt() > address.toInt()) {
                 right = mid - 1;
-            } else if (table[mid].toInt() + REGION_SIZE < address.toInt()) {
+            } else if (regionTable.get(mid).toInt() + REGION_SIZE < address.toInt()) {
                 left = mid + 1;
             }
         }
@@ -230,11 +230,7 @@ public class RegionSpace extends Space {
     @Inline
     public Address regionOf(ObjectReference object) {
         Address address = object.toAddress();
-        Address[] table = new Address[regionTable.length()];
-        for (int i = 0; i < regionTable.length(); i++) {
-            table[i] = regionTable.get(i);
-        }
-        return this.idealRegion(table, address);
+        return this.idealRegion(address);
     }
 
     /**
