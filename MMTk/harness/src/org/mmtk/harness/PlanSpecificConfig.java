@@ -125,10 +125,6 @@ public class PlanSpecificConfig {
         new PlanSpecific("org.mmtk.plan.stickyms.StickyMS")
         .addExpectedSpaces("ms"),
         "StickyMS");
-    register(
-        new PlanSpecific("org.mmtk.plan.region.Region")
-        .addExpectedSpaces("region"),
-        ”Region”);
   }
 
   /**
