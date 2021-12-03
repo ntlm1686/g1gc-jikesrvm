@@ -15,6 +15,7 @@ package org.vmmagic.unboxed;
 import org.vmmagic.pragma.*;
 import org.jikesrvm.VM;
 import org.jikesrvm.objectmodel.RuntimeTable;
+import java.util.*;
 
 /**
  * The VM front end is not capable of correct handling an array of Address, Word, ....

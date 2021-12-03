@@ -12,6 +12,8 @@
  */
 package org.vmmagic.unboxed;
 
+import java.util.*;
+
 public final class AddressArray {
 
   private Address[] data;
