@@ -23,7 +23,7 @@ import org.jikesrvm.objectmodel.RuntimeTable;
 @Uninterruptible
 public final class AddressArray implements RuntimeTable<Address> {
 
-  private final Address[] data;
+  private Address[] data;
 
   @Interruptible
   public static AddressArray create(int size) {
