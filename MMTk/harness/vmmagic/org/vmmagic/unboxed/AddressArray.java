@@ -42,6 +42,7 @@ public final class AddressArray {
     return data.length;
   }
 
+
   public void sort() {
     Address[] sorted = data;
     Arrays.sort(sorted, new Comparator<Address>() {
