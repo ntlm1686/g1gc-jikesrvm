@@ -63,14 +63,4 @@ public final class AddressArray implements RuntimeTable<Address> {
       VM.sysFail("AddressArray.getBacking called when not writing boot image");
     return data;
   }
-
-  @Inline
-  public Address[] getAll() {
-    return data;
-  }
-
-  @Inline
-  public void setAll(Address[] newData) {
-    data = newData;
-  }
 }
