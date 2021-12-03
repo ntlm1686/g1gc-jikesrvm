@@ -12,8 +12,6 @@
  */
 package org.vmmagic.unboxed;
 
-import java.util.*;
-
 public final class AddressArray {
 
   public static AddressArray create(int size) {
