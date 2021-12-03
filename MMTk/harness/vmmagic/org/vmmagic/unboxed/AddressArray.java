@@ -12,6 +12,8 @@
  */
 package org.vmmagic.unboxed;
 
+import java.util.*;
+
 public final class AddressArray {
 
   private Address[] data;
@@ -38,5 +40,16 @@ public final class AddressArray {
 
   public int length() {
     return data.length;
+  }
+
+  public Address[] sort() {
+    Address[] sorted = data.clone();
+    Arrays.sort(sorted, new Comparator<Address>() {
+      @Override
+      public int compare(Address X, Address Y) {
+          return X.toInt() - Y.toInt();
+      }
+    });
+    return sorted;
   }
 }
