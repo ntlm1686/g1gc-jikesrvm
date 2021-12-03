@@ -67,15 +67,11 @@ public final class AddressArray implements RuntimeTable<Address> {
 
   @Inline
   public void sort() {
-    Address[] sorted = data;
-    Arrays.sort(sorted, new Comparator<Address>() {
+    Arrays.sort(data, new Comparator<Address>() {
       @Override
       public int compare(Address X, Address Y) {
           return X.toInt() - Y.toInt();
       }
     });
-    for (int i = 0 ; i < sorted.length; i++) {
-      data[i] = sorted[i];
-    }
   }
 }
