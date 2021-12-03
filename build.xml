@@ -1516,7 +1516,7 @@ Check to make sure all required properties are specified. This includes properti
     </if>
   </target>
 
-  <!-- <target name="compile-unit-tests" depends="compile">
+  <target name="compile-unit-tests" depends="compile">
 
     <delete dir="${build.test-classes}"/>
     <mkdir dir="${build.test-classes}"/>
@@ -1538,9 +1538,9 @@ Check to make sure all required properties are specified. This includes properti
         <pathelement location="${mockito.jar}"/>
       </classpath>
     </javac>
-  </target> -->
+  </target>
 
-  <!-- <target name="bootstrap-unit-tests" description="Run unit tests on the boostrap VM" depends="compile-unit-tests">
+  <target name="bootstrap-unit-tests" description="Run unit tests on the boostrap VM" depends="compile-unit-tests">
 
     <delete dir="${junit.reports.bootstrap}"/>
     <mkdir dir="${junit.reports.bootstrap}"/>
@@ -1562,7 +1562,7 @@ Check to make sure all required properties are specified. This includes properti
         </fileset>
       </batchtest>
     </junit>
-  </target> -->
+  </target>
 
   <macrodef name="runUnitTests">
     <sequential>
@@ -1587,7 +1587,7 @@ Check to make sure all required properties are specified. This includes properti
     </sequential>
   </macrodef>
 
-  <!-- <target name="rvm-unit-tests" description="Run unit tests on Jikes RVM" depends="runtime" if="${require.rvm-unit-tests}">
+  <target name="rvm-unit-tests" description="Run unit tests on Jikes RVM" depends="runtime" if="${require.rvm-unit-tests}">
     <runUnitTests/>
   </target>
 
@@ -1595,7 +1595,7 @@ Check to make sure all required properties are specified. This includes properti
     <available file="${dist.base}/rvm" property="image.exists"/>
     <fail unless="image.exists" message="Could not find an image at ${dist.base}/rvm to run unit tests."/>
     <runUnitTests/>
-  </target> -->
+  </target>
 
   <target name="compile-vmmagic" depends="compile">
     <mkdir dir="${build.vmmagic.classes}"/>
