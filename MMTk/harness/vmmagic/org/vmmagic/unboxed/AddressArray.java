@@ -48,11 +48,9 @@ public final class AddressArray {
         sorted = true;
         for (int i = 0; i < data.length - 1; i++) {
             if (data[i].toLong() > data[i+1].toLong()) {
-                data[i].toLong() = data[i].toLong() + data[i+1].toLong();
-                data[i+1].toLong() = data[i].toLong() - data[i+1].toLong();
-                data[i].toLong() = data[i].toLong() - data[i+1].toLong();
-                data[i] = Address.fromLong(data[i].toLong());
-                data[i+1] = Address.fromLong(data[i+1].toLong());
+                data[i] = Address.fromLong(data[i].toLong() + data[i+1].toLong());
+                data[i+1] = Address.fromLong(data[i].toLong() - data[i+1].toLong());
+                data[i] = Address.fromLong(data[i].toLong() - data[i+1].toLong());
                 sorted = false;
             }
         }
