@@ -138,7 +138,7 @@ public class RegionSpace extends Space {
         markState = deltaMarkState(true);
 
         // reset the regions' info
-        resetRegionLiveBytes();
+        // resetRegionLiveBytes();
         resetRequireRelocation();
         resetRegionDeadBytes();
 
