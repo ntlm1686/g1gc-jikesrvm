@@ -30,6 +30,5 @@ public final class AddressArray {
   }
 
   public void sort() {
-    return null;
   }
 }
