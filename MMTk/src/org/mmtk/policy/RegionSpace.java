@@ -139,8 +139,8 @@ public class RegionSpace extends Space {
 
         // reset the regions' info
         // resetRegionLiveBytes();
-        resetRequireRelocation();
-        resetRegionDeadBytes();
+        // resetRequireRelocation();
+        // resetRegionDeadBytes();
 
         collectionSet.clear();
     }
