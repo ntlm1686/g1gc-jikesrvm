@@ -73,6 +73,8 @@ public final class AddressArray implements RuntimeTable<Address> {
           return X.toInt() - Y.toInt();
       }
     });
-    data = sorted;
+    for (int i = 0 ; i < sorted.length; i++) {
+      data[i] = sorted[i];
+    }
   }
 }
