@@ -174,7 +174,7 @@ public class RegionSpace extends Space {
     }
 
     private void sortTable() {
-        protected final AddressArray sortedRegionTable = AddressArray.create(REGION_NUMBER);
+        AddressArray sortedRegionTable = AddressArray.create(REGION_NUMBER);
         for (int i = 0; i < REGION_NUMBER; i++) {
             Address regionAddress = regionTable.get(i);
             sortedRegionTable.set(i, regionAddress);
