@@ -174,7 +174,7 @@ public class RegionSpace extends Space {
     }
 
     private void sortTable() {
-        Address[] buffer = new Address[];
+        Address[] buffer = new Address[regionTable.length()];
         for (i = 0; i < regionTable.length(); i++) {
             buffer[i] = regionTable.get(i);
         }
@@ -235,7 +235,7 @@ public class RegionSpace extends Space {
     @Inline
     public Address regionOf(ObjectReference object) {
         Address address = object.toAddress();
-        Address[] table = new Address[];
+        Address[] table = new Address[regionTable.length()];
         for (i = 0; i < regionTable.length(); i++) {
             table[i] = regionTable.get(i);
         }
