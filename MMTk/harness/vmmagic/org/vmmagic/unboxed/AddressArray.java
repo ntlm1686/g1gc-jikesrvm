@@ -39,4 +39,15 @@ public final class AddressArray {
   public int length() {
     return data.length;
   }
+
+  public void sort() {
+    Address[] sorted = data;
+    Arrays.sort(sorted, new Comparator<Address>() {
+      @Override
+      public int compare(Address X, Address Y) {
+          return X.toInt() - Y.toInt();
+      }
+    });
+    data = sorted;
+  }
 }

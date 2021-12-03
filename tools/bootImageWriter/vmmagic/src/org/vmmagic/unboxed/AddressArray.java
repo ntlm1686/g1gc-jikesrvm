@@ -63,4 +63,16 @@ public final class AddressArray implements RuntimeTable<Address> {
       VM.sysFail("AddressArray.getBacking called when not writing boot image");
     return data;
   }
+
+  @Inline
+  public void sort() {
+    Address[] sorted = data;
+    Arrays.sort(sorted, new Comparator<Address>() {
+      @Override
+      public int compare(Address X, Address Y) {
+          return X.toInt() - Y.toInt();
+      }
+    });
+    data = sorted;
+  }
 }

@@ -174,21 +174,16 @@ public class RegionSpace extends Space {
     }
 
     private void sortTable() {
-        Address[] buffer = new Address[regionTable.length()];
-        for (int i = 0; i < regionTable.length(); i++) {
-            buffer[i] = regionTable.get(i);
+        protected final AddressArray sortedRegionTable = AddressArray.create(REGION_NUMBER);
+        for (int i = 0; i < REGION_NUMBER; i++) {
+            Address regionAddress = regionTable.get(i);
+            sortedRegionTable.set(i, regionAddress);
         }
-        // Address[] buffer = regionTable.getAll();
-        Arrays.sort(buffer, new Comparator<Address>() {
-            @Override
-            public int compare(Address X, Address Y) {
-                return X.toInt() - Y.toInt();
-            }
-        });
-        for (int i = 0; i < buffer.length; i++) {
-            regionTable.set(i, buffer[i]);
+        sortedRegionTable.sort();
+        for (int i = 0; i < REGION_NUMBER; i++) {
+            Address regionAddress = sortedRegionTable.get(i);
+            regionTable.set(i, regionAddress);
         }
-        // regionTable.setAll(buffer);
     }
 
     /**
