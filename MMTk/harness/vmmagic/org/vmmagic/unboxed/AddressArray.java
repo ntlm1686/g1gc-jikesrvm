@@ -44,7 +44,7 @@ public final class AddressArray {
     return data;
   }
 
-  public void setAll(Address[] data) {
-    this.data = data;
+  public void setAll(Address[] newData) {
+    data = newData;
   }
 }
