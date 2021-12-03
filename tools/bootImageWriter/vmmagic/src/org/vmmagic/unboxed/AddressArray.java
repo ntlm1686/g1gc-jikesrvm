@@ -23,7 +23,7 @@ import org.jikesrvm.objectmodel.RuntimeTable;
 @Uninterruptible
 public final class AddressArray implements RuntimeTable<Address> {
 
-  private Address[] data;
+  private final Address[] data;
 
   @Interruptible
   public static AddressArray create(int size) {
@@ -62,15 +62,5 @@ public final class AddressArray implements RuntimeTable<Address> {
     if (!VM.writingImage)
       VM.sysFail("AddressArray.getBacking called when not writing boot image");
     return data;
-  }
-
-  @Inline
-  public Address[] getAll() {
-    return data;
-  }
-
-  @Inline
-  public void setAll(Address[] newData) {
-    data = newData;
   }
 }
