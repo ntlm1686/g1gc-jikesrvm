@@ -1609,7 +1609,7 @@ Check to make sure all required properties are specified. This includes properti
     </javac>
   </target>
 
-  <target name="package" depends="bootstrap-unit-tests,compile-vmmagic,package-classpath,package-openjdk"/>
+  <target name="package" depends="compile-vmmagic,package-classpath,package-openjdk"/>
 
   <target name="package-openjdk" if="openjdk.classlib">
     <zip destfile="${build.rt.jar}" duplicate="preserve" basedir="${build.classes}" compress="false">
