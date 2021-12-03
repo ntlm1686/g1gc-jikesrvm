@@ -175,7 +175,7 @@ public class RegionSpace extends Space {
 
     private void sortTable() {
         Address[] buffer = new Address[regionTable.length()];
-        for (i = 0; i < regionTable.length(); i++) {
+        for (int i = 0; i < regionTable.length(); i++) {
             buffer[i] = regionTable.get(i);
         }
         // Address[] buffer = regionTable.getAll();
@@ -185,7 +185,7 @@ public class RegionSpace extends Space {
                 return X.toInt() - Y.toInt();
             }
         });
-        for (i = 0; i < buffer.length; i++) {
+        for (int i = 0; i < buffer.length; i++) {
             regionTable.set(i, buffer[i]);
         }
         // regionTable.setAll(buffer);
@@ -236,7 +236,7 @@ public class RegionSpace extends Space {
     public Address regionOf(ObjectReference object) {
         Address address = object.toAddress();
         Address[] table = new Address[regionTable.length()];
-        for (i = 0; i < regionTable.length(); i++) {
+        for (int i = 0; i < regionTable.length(); i++) {
             table[i] = regionTable.get(i);
         }
         return this.idealRegion(table, address);
