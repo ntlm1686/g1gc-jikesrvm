@@ -86,9 +86,9 @@ public class RegionSpace extends Space {
         } else {
             pr = new MonotonePageResource(this, start, extent, META_DATA_PAGES_PER_REGION);
         }
-        this.initializeRegions();
-        this.resetRegionLiveBytes();
-        this.resetRequireRelocation();
+        // this.initializeRegions();
+        // this.resetRegionLiveBytes();
+        // this.resetRequireRelocation();
     }
 
     /**
@@ -138,9 +138,9 @@ public class RegionSpace extends Space {
         markState = deltaMarkState(true);
 
         // reset the regions' info
-        resetRegionLiveBytes();
-        resetRequireRelocation();
-        resetRegionDeadBytes();
+        // resetRegionLiveBytes();
+        // resetRequireRelocation();
+        // resetRegionDeadBytes();
 
         collectionSet.clear();
     }
