@@ -86,9 +86,9 @@ public class RegionSpace extends Space {
         } else {
             pr = new MonotonePageResource(this, start, extent, META_DATA_PAGES_PER_REGION);
         }
-        // this.initializeRegions();
-        // this.resetRegionLiveBytes();
-        // this.resetRequireRelocation();
+        this.initializeRegions();
+        this.resetRegionLiveBytes();
+        this.resetRequireRelocation();
     }
 
     /**
@@ -179,7 +179,18 @@ public class RegionSpace extends Space {
             Address regionAddress = regionTable.get(i);
             sortedRegionTable.set(i, regionAddress);
         }
-        sortedRegionTable.sort();
+        boolean sorted = false;
+        while(!sorted) {
+            sorted = true;
+            for (int i = 0; i < sortedRegionTable.length() - 1; i++) {
+                if (sortedRegionTable.get(i).toLong() > sortedRegionTable.get(i+1).toLong()) {
+                    sortedRegionTable.set(i, Address.fromLong(sortedRegionTable.get(i).toLong() + sortedRegionTable.get(i+1).toLong()));
+                    sortedRegionTable.set(i+1, Address.fromLong(sortedRegionTable.get(i).toLong() - sortedRegionTable.get(i+1).toLong()));
+                    sortedRegionTable.set(i, Address.fromLong(sortedRegionTable.get(i).toLong() - sortedRegionTable.get(i+1).toLong()));
+                    sorted = false;
+                }
+            }
+        }
         for (int i = 0; i < REGION_NUMBER; i++) {
             Address regionAddress = sortedRegionTable.get(i);
             regionTable.set(i, regionAddress);
