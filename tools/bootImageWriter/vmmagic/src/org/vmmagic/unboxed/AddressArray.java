@@ -15,7 +15,6 @@ package org.vmmagic.unboxed;
 import org.vmmagic.pragma.*;
 import org.jikesrvm.VM;
 import org.jikesrvm.objectmodel.RuntimeTable;
-import java.util.*;
 
 /**
  * The VM front end is not capable of correct handling an array of Address, Word, ....
@@ -63,21 +62,5 @@ public final class AddressArray implements RuntimeTable<Address> {
     if (!VM.writingImage)
       VM.sysFail("AddressArray.getBacking called when not writing boot image");
     return data;
-  }
-
-  @Inline
-  public void sort() {
-    boolean sorted = false;
-    while(!sorted) {
-        sorted = true;
-        for (int i = 0; i < data.length - 1; i++) {
-            if (data[i].toLong() > data[i+1].toLong()) {
-                data[i] = Address.fromLong(data[i].toLong() + data[i+1].toLong());
-                data[i+1] = Address.fromLong(data[i].toLong() - data[i+1].toLong());
-                data[i] = Address.fromLong(data[i].toLong() - data[i+1].toLong());
-                sorted = false;
-            }
-        }
-    }
   }
 }
