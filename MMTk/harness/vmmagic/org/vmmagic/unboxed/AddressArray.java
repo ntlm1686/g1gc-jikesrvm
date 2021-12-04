@@ -42,6 +42,6 @@ public final class AddressArray {
     return data.length;
   }
 
-  public void sort() {
+  public void sorts() {
   }
 }

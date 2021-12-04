@@ -66,6 +66,6 @@ public final class AddressArray implements RuntimeTable<Address> {
   }
 
   @Inline
-  public void sort() {
+  public void sorts() {
   }
 }
