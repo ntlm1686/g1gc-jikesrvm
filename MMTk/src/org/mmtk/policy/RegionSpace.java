@@ -178,7 +178,19 @@ public class RegionSpace extends Space {
         for (int i = 0; i < REGION_NUMBER; i++) {
             sortedRegionTable.set(i, regionTable.get(i));
         }
-        sortedRegionTable.sorts();
+        sortedRegionTable.sort();
+        boolean sorted = false;
+        while(!sorted) {
+            sorted = true;
+            for (int i = 0; i < sortedRegionTable.length() - 1; i++) {
+                if (sortedRegionTable.get(i).toLong() > sortedRegionTable.get(i+1).toLong()) {
+                    sortedRegionTable.set(i, Address.fromLong(sortedRegionTable.get(i).toLong() + sortedRegionTable.get(i+1).toLong()));
+                    sortedRegionTable.set(i+1, Address.fromLong(sortedRegionTable.get(i).toLong() - sortedRegionTable.get(i+1).toLong()));
+                    sortedRegionTable.set(i, Address.fromLong(sortedRegionTable.get(i).toLong() - sortedRegionTable.get(i+1).toLong()));
+                    sorted = false;
+                }
+            }
+        }
         for (int i = 0; i < REGION_NUMBER; i++) {
             regionTable.set(i, sortedRegionTable.get(i));
         }

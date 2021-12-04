@@ -29,6 +29,6 @@ public final class AddressArray {
     return 0;
   }
 
-  public void sorts() {
+  public void sort() {
   }
 }
