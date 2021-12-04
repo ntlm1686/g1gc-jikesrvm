@@ -143,6 +143,7 @@ public class RegionSpace extends Space {
         markState = deltaMarkState(true);
 
         // reset the regions' info
+
         this.resetRegionLiveBytes();
         this.resetRequireRelocation();
         this.resetRegionDeadBytes();
@@ -178,18 +179,30 @@ public class RegionSpace extends Space {
         return newRegion;
     }
 
-    // private void sortTable() {
-    //     AddressArray sortedRegionTable = AddressArray.create(REGION_NUMBER);
-    //     for (int i = 0; i < REGION_NUMBER; i++) {
-    //         Address regionAddress = regionTable.get(i);
-    //         sortedRegionTable.set(i, regionAddress);
-    //     }
-    //     sortedRegionTable.sort();
-    //     for (int i = 0; i < REGION_NUMBER; i++) {
-    //         Address regionAddress = sortedRegionTable.get(i);
-    //         regionTable.set(i, regionAddress);
-    //     }
-    // }
+
+    private void sortTable() {
+        AddressArray sortedRegionTable = AddressArray.create(REGION_NUMBER);
+        for (int i = 0; i < REGION_NUMBER; i++) {
+            Address regionAddress = regionTable.get(i);
+            sortedRegionTable.set(i, regionAddress);
+        }
+        boolean sorted = false;
+        while(!sorted) {
+            sorted = true;
+            for (int i = 0; i < sortedRegionTable.length() - 1; i++) {
+                if (sortedRegionTable.get(i).toLong() > sortedRegionTable.get(i+1).toLong()) {
+                    sortedRegionTable.set(i, Address.fromLong(sortedRegionTable.get(i).toLong() + sortedRegionTable.get(i+1).toLong()));
+                    sortedRegionTable.set(i+1, Address.fromLong(sortedRegionTable.get(i).toLong() - sortedRegionTable.get(i+1).toLong()));
+                    sortedRegionTable.set(i, Address.fromLong(sortedRegionTable.get(i).toLong() - sortedRegionTable.get(i+1).toLong()));
+                    sorted = false;
+                }
+            }
+        }
+        for (int i = 0; i < REGION_NUMBER; i++) {
+            Address regionAddress = sortedRegionTable.get(i);
+            regionTable.set(i, regionAddress);
+        }
+    }
 
     /**
      * Initialize the regions.
