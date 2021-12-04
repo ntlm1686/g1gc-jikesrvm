@@ -60,15 +60,20 @@ public class RegionSpace extends Space {
     int availableRegionCount = 0;
 
     // Before we implement the metadata, we use a map instead
-    protected static Map<Address, Integer> regionLiveBytes = new HashMap<Address, Integer>();
-
+    // protected static Map<Address, Integer> regionLiveBytes = new HashMap<Address, Integer>();
     // DeadBytes for every regio that is calcuoated before evacuation
-    protected static Map<Address, Integer> regionDeadBytes = new HashMap<Address, Integer>();
+    // protected static Map<Address, Integer> regionDeadBytes = new HashMap<Address, Integer>();
 
     // Regions on which garbage collector will be executed
     protected static List<Address> collectionSet = new ArrayList<Address>();
 
-    protected final Map<Address, Boolean> requireRelocation = new HashMap<Address, Boolean>();
+    protected static Map<Integer, Integer> regionLiveBytes = new HashMap<Integer, Integer>();
+    protected static Map<Integer, Integer> regionDeadBytes = new HashMap<Integer, Integer>();
+
+
+
+    // protected final Map<Address, Boolean> requireRelocation = new HashMap<Address, Boolean>();
+    protected final Map<Integer, Boolean> requireRelocation = new HashMap<Integer, Boolean>();
 
     // constructor
     public RegionSpace(String name, VMRequest vmRequest) {
@@ -86,9 +91,9 @@ public class RegionSpace extends Space {
         } else {
             pr = new MonotonePageResource(this, start, extent, META_DATA_PAGES_PER_REGION);
         }
-        // this.initializeRegions();
-        // this.resetRegionLiveBytes();
-        // this.resetRequireRelocation();
+        this.initializeRegions();
+        this.resetRegionLiveBytes();
+        this.resetRequireRelocation();
     }
 
     /**
@@ -138,9 +143,10 @@ public class RegionSpace extends Space {
         markState = deltaMarkState(true);
 
         // reset the regions' info
-        // resetRegionLiveBytes();
-        // resetRequireRelocation();
-        // resetRegionDeadBytes();
+
+        this.resetRegionLiveBytes();
+        this.resetRequireRelocation();
+        this.resetRegionDeadBytes();
 
         collectionSet.clear();
     }
@@ -169,9 +175,10 @@ public class RegionSpace extends Space {
      */
     @Inline
     private Address addRegion() {
-        Address newRegion = this.acquire(PAGES_PER_REGION);
+        Address newRegion = acquire(PAGES_PER_REGION);
         return newRegion;
     }
+
 
     private void sortTable() {
         AddressArray sortedRegionTable = AddressArray.create(REGION_NUMBER);
@@ -203,12 +210,12 @@ public class RegionSpace extends Space {
     @Inline
     private void initializeRegions() {
         for (int i = 0; i < REGION_NUMBER; i++) {
-            Address region = addRegion();
+            Address region = Address.zero();
             availableRegionCount++;
             regionTable.set(i, region);
             availableRegion.set(i, region);
         }
-        this.sortTable();
+        // this.sortTable();
     }
 
     private boolean isRegionIdeal(Address X, Address Y) {
@@ -295,33 +302,33 @@ public class RegionSpace extends Space {
      */
     @Inline
     public void updateCollectionSet() {
-        // calculate dead Bytes from lives
-        updateDeadBytesInformation();
-        regionDeadBytes = sortAddressMapByValueDesc(regionDeadBytes);
+        // // calculate dead Bytes from lives
+        // updateDeadBytesInformation();
+        // regionDeadBytes = sortAddressMapByValueDesc(regionDeadBytes);
 
-        // int totalAvailableBytes = REGION_SIZE * availableRegionCount;
+        // // int totalAvailableBytes = REGION_SIZE * availableRegionCount;
 
-        int counter = 0;
-        for (Map.Entry<Address, Integer> region : regionDeadBytes.entrySet()) {
-            // if (regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
-            if (counter < availableRegionCount) {
-                collectionSet.add(region.getKey());
-                requireRelocation.put(region.getKey(), true);
-                // totalAvailableBytes -= regionLiveBytes.get(region.getKey());
-                counter++;
-            } else {
-                break;
-            }
-        }
+        // int counter = 0;
+        // for (Map.Entry<Address, Integer> region : regionDeadBytes.entrySet()) {
+        //     // if (regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
+        //     if (counter < availableRegionCount) {
+        //         collectionSet.add(region.getKey());
+        //         requireRelocation.put(region.getKey(), true);
+        //         // totalAvailableBytes -= regionLiveBytes.get(region.getKey());
+        //         counter++;
+        //     } else {
+        //         break;
+        //     }
+        // }
     }
 
-    public void updateDeadBytesInformation() {
-        for (Map.Entry<Address, Integer> addressEntry : regionLiveBytes.entrySet()) {
-            Address dataEnd = BumpPointer.getDataEnd(addressEntry.getKey());
-            regionDeadBytes.put(addressEntry.getKey(),
-                    (dataEnd.toInt() - addressEntry.getKey().toInt()) - addressEntry.getValue());
-        }
-    }
+    // public void updateDeadBytesInformation() {
+    //     for (Map.Entry<Address, Integer> addressEntry : regionLiveBytes.entrySet()) {
+    //         Address dataEnd = BumpPointer.getDataEnd(addressEntry.getKey());
+    //         regionDeadBytes.put(addressEntry.getKey(),
+    //                 (dataEnd.toInt() - addressEntry.getKey().toInt()) - addressEntry.getValue());
+    //     }
+    // }
 
     /**
      * Atomically attempt to set the mark bit of an object.
@@ -411,7 +418,7 @@ public class RegionSpace extends Space {
     private void resetRegionLiveBytes() {
         // assert regionTable has been initialized
         for (int i = 0; i < REGION_NUMBER; i++) {
-            regionLiveBytes.put(regionTable.get(i), 0);
+            regionLiveBytes.put(Address.zero().toInt(), 0);
         }
     }
 
@@ -422,7 +429,7 @@ public class RegionSpace extends Space {
     private void resetRegionDeadBytes() {
         // assert regionTable has been initialized
         for (int i = 0; i < REGION_NUMBER; i++) {
-            regionDeadBytes.put(regionTable.get(i), 0);
+            regionDeadBytes.put(regionTable.get(i).toInt(), 0);
         }
     }
 
@@ -433,7 +440,7 @@ public class RegionSpace extends Space {
     private void resetRequireRelocation() {
         // assert regionTable has been initialized
         for (int i = 0; i < REGION_NUMBER; i++) {
-            requireRelocation.put(regionTable.get(i), false);
+            requireRelocation.put(regionTable.get(i).toInt(), false);
         }
     }
 
@@ -446,7 +453,7 @@ public class RegionSpace extends Space {
     @Inline
     private void updateRegionliveBytes(Address region, ObjectReference object) {
         // update the region's live bytes
-        regionLiveBytes.put(region, sizeOf(object) + regionLiveBytes.get(region));
+        regionLiveBytes.put(region.toInt(), sizeOf(object) + regionLiveBytes.get(region.toInt()));
     }
 
     /**
@@ -550,7 +557,7 @@ public class RegionSpace extends Space {
                 return ForwardingWord.extractForwardingPointer(forwardingWord);
             } else {
                 if (VM.VERIFY_ASSERTIONS)
-                    VM.assertions._assert(regionLiveBytes.get(regionOf(object)) != 0);
+                    VM.assertions._assert(regionLiveBytes.get(regionOf(object).toInt()) != 0);
 
                 // object is not being forwarded, copy it
                 ObjectReference newObject = VM.objectModel.copy(object, allocator);
@@ -558,8 +565,8 @@ public class RegionSpace extends Space {
                 trace.processNode(newObject);
 
                 // TODO per region lock?
-                int newLiveBytes = regionLiveBytes.get(regionOf(object)) - sizeOf(object);
-                regionLiveBytes.put(regionOf(object), newLiveBytes);
+                int newLiveBytes = regionLiveBytes.get(regionOf(object).toInt()) - sizeOf(object);
+                regionLiveBytes.put(regionOf(object).toInt(), newLiveBytes);
                 if (newLiveBytes == 0) {
                     // if new live bytes is 0, the region is empty, it's available again
                     lock.acquire();
