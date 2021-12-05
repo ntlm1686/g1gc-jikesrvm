@@ -65,15 +65,15 @@ public class RegionSpace extends Space {
     // protected static Map<Address, Integer> regionDeadBytes = new HashMap<Address, Integer>();
 
     // Regions on which garbage collector will be executed
-    protected static List<Address> collectionSet = new ArrayList<Address>();
+    protected static List<Integer> collectionSet = new ArrayList<>();
 
-    protected static Map<Integer, Integer> regionLiveBytes = new HashMap<Integer, Integer>();
-    protected static Map<Integer, Integer> regionDeadBytes = new HashMap<Integer, Integer>();
+    protected static Map<Integer, Integer> regionLiveBytes = new HashMap<>();
+    protected static Map<Integer, Integer> regionDeadBytes = new HashMap<>();
 
 
 
     // protected final Map<Address, Boolean> requireRelocation = new HashMap<Address, Boolean>();
-    protected final Map<Integer, Boolean> requireRelocation = new HashMap<Integer, Boolean>();
+    protected final Map<Integer, Boolean> requireRelocation = new HashMap<>();
 
     // constructor
     public RegionSpace(String name, VMRequest vmRequest) {
@@ -110,11 +110,11 @@ public class RegionSpace extends Space {
      */
     @Inline
     public void release() {
-        for (Address regionAddress : collectionSet) {
-            release(regionAddress);
+        for (Integer regionAddress : collectionSet) {
+            release(Address.fromLong(new Long(regionAddress)));
             availableRegionCount++;
             assert availableRegionCount < REGION_NUMBER;
-            availableRegion.set(availableRegionCount, regionAddress);
+            availableRegion.set(availableRegionCount, Address.fromLong(new Long(regionAddress)));
         }
     }
 
@@ -302,33 +302,33 @@ public class RegionSpace extends Space {
      */
     @Inline
     public void updateCollectionSet() {
-        // // calculate dead Bytes from lives
-        // updateDeadBytesInformation();
-        // regionDeadBytes = sortAddressMapByValueDesc(regionDeadBytes);
+        // calculate dead Bytes from lives
+        updateDeadBytesInformation();
+         regionDeadBytes = sortAddressMapByValueDesc(regionDeadBytes);
 
-        // // int totalAvailableBytes = REGION_SIZE * availableRegionCount;
+         int totalAvailableBytes = REGION_SIZE * availableRegionCount;
 
-        // int counter = 0;
-        // for (Map.Entry<Address, Integer> region : regionDeadBytes.entrySet()) {
-        //     // if (regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
-        //     if (counter < availableRegionCount) {
-        //         collectionSet.add(region.getKey());
-        //         requireRelocation.put(region.getKey(), true);
-        //         // totalAvailableBytes -= regionLiveBytes.get(region.getKey());
-        //         counter++;
-        //     } else {
-        //         break;
-        //     }
-        // }
+         int counter = 0;
+         for (Map.Entry<Integer, Integer> region : regionDeadBytes.entrySet()) {
+             if (regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
+             if (counter < availableRegionCount) {
+                collectionSet.add(region.getKey().toInt());
+                requireRelocation.put(region.getKey().toInt(), true);
+                // totalAvailableBytes -= regionLiveBytes.get(region.getKey());
+                counter++;
+            } else {
+                break;
+            }
+        }
     }
 
-    // public void updateDeadBytesInformation() {
-    //     for (Map.Entry<Address, Integer> addressEntry : regionLiveBytes.entrySet()) {
-    //         Address dataEnd = BumpPointer.getDataEnd(addressEntry.getKey());
-    //         regionDeadBytes.put(addressEntry.getKey(),
-    //                 (dataEnd.toInt() - addressEntry.getKey().toInt()) - addressEntry.getValue());
-    //     }
-    // }
+     public void updateDeadBytesInformation() {
+        for (Map.Entry<Integer, Integer> addressEntry : regionLiveBytes.entrySet()) {
+            Address dataEnd = BumpPointer.getDataEnd(Address.fromLong(new Long(addressEntry.getKey())));
+            regionDeadBytes.put(addressEntry.getKey(),
+                    (dataEnd.toInt() - addressEntry.getKey().toInt()) - addressEntry.getValue());
+        }
+    }
 
     /**
      * Atomically attempt to set the mark bit of an object.
@@ -476,18 +476,18 @@ public class RegionSpace extends Space {
      * @param Map of regions with key as start address and value as live/ dead bytes
      * @return Map of regions sorted based on value
      */
-    public static Map<Address, Integer> sortAddressMapByValueDesc(Map<Address, Integer> addressMap) {
-        List<Map.Entry<Address, Integer>> list = new LinkedList<Map.Entry<Address, Integer>>(addressMap.entrySet());
-        Collections.sort(list, new Comparator<Map.Entry<Address, Integer>>() {
+    public static Map<Integer, Integer> sortAddressMapByValueDesc(Map<Integer, Integer> addressMap) {
+        List<Map.Entry<Integer, Integer>> list = new LinkedList<Map.Entry<Integer, Integer>>(addressMap.entrySet());
+        Collections.sort(list, new Comparator<Map.Entry<Integer, Integer>>() {
             @Override
-            public int compare(Map.Entry<Address, Integer> o1,
-                    Map.Entry<Address, Integer> o2) {
+            public int compare(Map.Entry<Integer, Integer> o1,
+                    Map.Entry<Integer, Integer> o2) {
                 return (o2.getValue()).compareTo(o1.getValue());
             }
         });
 
-        Map<Address, Integer> tempMap = new LinkedHashMap<Address, Integer>();
-        for (Map.Entry<Address, Integer> address : list) {
+        Map<Integer, Integer> tempMap = new LinkedHashMap<Integer, Integer>();
+        for (Map.Entry<Integer, Integer> address : list) {
             tempMap.put(address.getKey(), address.getValue());
         }
         return tempMap;
@@ -497,47 +497,47 @@ public class RegionSpace extends Space {
      * Perform evacuation on this space, this method should be called
      * by the global pool for now.
      */
-    public void evacuation(int allocator) {
-        for (Address regionAddress : collectionSet) {
-            this.scanTheRegion(regionAddress, allocator);
-        }
-    }
+    // public void evacuation(int allocator) {
+    //     for (Address regionAddress : collectionSet) {
+    //         this.scanTheRegion(regionAddress, allocator);
+    //     }
+    // }
 
-    /**
-     * Author: Mahideep Tumati
-     * <p>
-     * linear scan/ evacuation an individual region .
-     *
-     * @param region start address
-     * @return
-     */
-    public void scanTheRegion(Address regionAddress, int allocator) {
-        // Fetch data end using start address
-        Address dataEnd = RegionAllocator.getDataEnd(regionAddress);
+    // /**
+    //  * Author: Mahideep Tumati
+    //  * <p>
+    //  * linear scan/ evacuation an individual region .
+    //  *
+    //  * @param region start address
+    //  * @return
+    //  */
+    // public void scanTheRegion(Address regionAddress, int allocator) {
+    //     // Fetch data end using start address
+    //     Address dataEnd = RegionAllocator.getDataEnd(regionAddress);
 
-        // Check if offset is valid or not
-        ObjectReference currentObject = VM.objectModel.getObjectFromStartAddress(regionAddress.plus(DATA_START_OFFSET));
-        do {
-            /* Read end address first, as scan may be destructive */
-            Address currentObjectEnd = VM.objectModel.getObjectEndAddress(currentObject);
+    //     // Check if offset is valid or not
+    //     ObjectReference currentObject = VM.objectModel.getObjectFromStartAddress(regionAddress.plus(DATA_START_OFFSET));
+    //     do {
+    //         /* Read end address first, as scan may be destructive */
+    //         Address currentObjectEnd = VM.objectModel.getObjectEndAddress(currentObject);
 
-            if (currentObjectEnd.GE(dataEnd)) {
-                /* We have scanned the last object */
-                break;
-            }
+    //         if (currentObjectEnd.GE(dataEnd)) {
+    //             /* We have scanned the last object */
+    //             break;
+    //         }
 
-            if (this.isLive(currentObject))
-                VM.objectModel.copy(currentObject, allocator);
+    //         if (this.isLive(currentObject))
+    //             VM.objectModel.copy(currentObject, allocator);
 
-            // next object to scan
-            ObjectReference nextObj = VM.objectModel.getObjectFromStartAddress(currentObjectEnd);
-            if (VM.VERIFY_ASSERTIONS) {
-                /* Must be monotonically increasing */
-                VM.assertions._assert(nextObj.toAddress().GT(currentObject.toAddress()));
-            }
-            currentObject = nextObj;
-        } while (true);
-    }
+    //         // next object to scan
+    //         ObjectReference nextObj = VM.objectModel.getObjectFromStartAddress(currentObjectEnd);
+    //         if (VM.VERIFY_ASSERTIONS) {
+    //             /* Must be monotonically increasing */
+    //             VM.assertions._assert(nextObj.toAddress().GT(currentObject.toAddress()));
+    //         }
+    //         currentObject = nextObj;
+    //     } while (true);
+    // }
 
     /**
      * Another full heap tracing. Copying all live objects in selected regions.
