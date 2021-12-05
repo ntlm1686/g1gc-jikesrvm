@@ -129,7 +129,6 @@ public class RegionSpace extends Space {
      * If an object is alive.
      */
     @Override
-    @Inline
     public boolean isLive(ObjectReference object) {
         return testMarkState(object);
     }
@@ -156,7 +155,6 @@ public class RegionSpace extends Space {
      *
      * @return
      */
-    @Inline
     public Address getRegion() {
         lock.acquire();
         if (availableRegionCount == 0) {
