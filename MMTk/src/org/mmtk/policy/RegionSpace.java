@@ -226,7 +226,7 @@ public class RegionSpace extends Space {
         int left = 0;
         int right = regionTable.length() - 1;
         while (left <= right) {
-            int mid = (left + right) >>> 1;
+            int mid = (left + right) / 2;
             left = mid + 1;
             // if (this.isRegionIdeal(regionTable.get(mid), address)) {
             //     return regionTable.get(mid);
