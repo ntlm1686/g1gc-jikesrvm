@@ -45,6 +45,7 @@ public class RegionEvacuateLocal extends TraceLocal {
 
     @Override
     public boolean willNotMoveInCurrentCollection(ObjectReference object) {
-        return !Region.regionSpace.relocationRequired(Region.regionSpace.regionOf(object));
+        return false;
+        // return !Region.regionSpace.relocationRequired(Region.regionSpace.regionOf(object));
     }
 }
