@@ -65,15 +65,15 @@ public class RegionSpace extends Space {
     // protected static Map<Address, Integer> regionDeadBytes = new HashMap<Address, Integer>();
 
     // Regions on which garbage collector will be executed
-    protected static List<Integer> collectionSet = new ArrayList<>();
+    protected static List<Integer> collectionSet = new ArrayList<Integer>();
 
-    protected static Map<Integer, Integer> regionLiveBytes = new HashMap<>();
-    protected static Map<Integer, Integer> regionDeadBytes = new HashMap<>();
+    protected static Map<Integer, Integer> regionLiveBytes = new HashMap<Integer, Integer>();
+    protected static Map<Integer, Integer> regionDeadBytes = new HashMap<Integer, Integer>();
 
 
 
     // protected final Map<Address, Boolean> requireRelocation = new HashMap<Address, Boolean>();
-    protected final Map<Integer, Boolean> requireRelocation = new HashMap<>();
+    protected final Map<Integer, Boolean> requireRelocation = new HashMap<Integer, Boolean>();
 
     // constructor
     public RegionSpace(String name, VMRequest vmRequest) {
@@ -322,6 +322,7 @@ public class RegionSpace extends Space {
         }
     }
 
+     @Inline
      public void updateDeadBytesInformation() {
         for (Map.Entry<Integer, Integer> addressEntry : regionLiveBytes.entrySet()) {
             Address dataEnd = BumpPointer.getDataEnd(Address.fromLong(new Long(addressEntry.getKey())));
