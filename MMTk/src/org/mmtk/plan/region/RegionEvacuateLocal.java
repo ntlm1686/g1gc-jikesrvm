@@ -47,6 +47,7 @@ public class RegionEvacuateLocal extends TraceLocal {
     public boolean willNotMoveInCurrentCollection(ObjectReference object) {
         if (Space.isInSpace(Region.RS, object))
             return Region.regionSpace.relocationRequired(Region.regionSpace.regionOf(object));
-        return super.willNotMoveInCurrentCollection(object);
+        return false;
+        // return super.willNotMoveInCurrentCollection(object);
     }
 }
