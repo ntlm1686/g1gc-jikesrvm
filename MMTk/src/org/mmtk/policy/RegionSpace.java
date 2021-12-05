@@ -401,12 +401,8 @@ public class RegionSpace extends Space {
      * @param region
      * @return
      */
-    private boolean relocationRequired(Address region) {
+    public boolean relocationRequired(Address region) {
         return requireRelocation.get(region.toInt());
-    }
-
-    public boolean relocationRequired(ObjectReference object) {
-        return this.relocationRequired(regionOf(object));
     }
 
     /**
