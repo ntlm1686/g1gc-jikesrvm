@@ -28,7 +28,4 @@ public final class AddressArray {
   public int length() {
     return 0;
   }
-
-  public void sort() {
-  }
 }
