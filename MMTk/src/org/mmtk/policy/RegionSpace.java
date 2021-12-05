@@ -402,7 +402,7 @@ public class RegionSpace extends Space {
      * @return
      */
     @Inline
-    private boolean relocationRequired(Address region) {
+    public boolean relocationRequired(Address region) {
         return relocationRequired(region);
     }
 
