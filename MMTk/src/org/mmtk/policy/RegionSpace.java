@@ -236,7 +236,7 @@ public class RegionSpace extends Space {
                 left = mid + 1;
             }
         }
-        return Address.zero();
+        return address;
     }
 
     /**
@@ -248,8 +248,7 @@ public class RegionSpace extends Space {
     @Inline
     public Address regionOf(ObjectReference object) {
         Address address = object.toAddress();
-        return address;
-        // return this.idealRegion(address);
+        return this.idealRegion(address);
     }
 
     /**
