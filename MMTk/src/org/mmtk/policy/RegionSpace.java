@@ -187,7 +187,7 @@ public class RegionSpace extends Space {
         boolean sorted = false;
         while(!sorted) {
             sorted = true;
-            for (int i = 0; i < sortedRegionTable.length() - 1; i++) {
+            for (int i = 0; i < REGION_NUMBER - 1; i++) {
                 if (sortedRegionTable.get(i).toLong() > sortedRegionTable.get(i+1).toLong()) {
                     sortedRegionTable.set(i, Address.fromLong(sortedRegionTable.get(i).toLong() + sortedRegionTable.get(i+1).toLong()));
                     sortedRegionTable.set(i+1, Address.fromLong(sortedRegionTable.get(i).toLong() - sortedRegionTable.get(i+1).toLong()));
@@ -222,7 +222,7 @@ public class RegionSpace extends Space {
 
     private Address idealRegion(Address address) {
         int left = 0;
-        int right = regionTable.length() - 1;
+        int right = REGION_NUMBER - 1;
         while (left <= right) {
             int mid = (left + right) >>> 1;
             if (this.isRegionIdeal(regionTable.get(mid), address)) {
@@ -399,12 +399,8 @@ public class RegionSpace extends Space {
      * @param region
      * @return
      */
-    private boolean relocationRequired(Address region) {
-        return requireRelocation.get(region.toInt());
-    }
-
     public boolean relocationRequired(ObjectReference object) {
-        return this.relocationRequired(regionOf(object));
+        return Boolean.TRUE.equals(requireRelocation.get(new Integer(regionOf(object).toInt())));
     }
 
     /**
@@ -500,44 +496,40 @@ public class RegionSpace extends Space {
     @Inline
     public ObjectReference traceEvacuateObject(TransitiveClosure trace, ObjectReference object, int allocator) {
 
-        // Word oldValue = VM.objectModel.prepareAvailableBits(object);
-        // Word forwardingWord = ForwardingWord.attemptToForward(object);
+        if (relocationRequired(object)) {
+            Word forwardingWord = ForwardingWord.attemptToForward(object);
+            if (ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
+                while (ForwardingWord.stateIsBeingForwarded(forwardingWord))
+                    forwardingWord = VM.objectModel.readAvailableBitsWord(object);
+                return ForwardingWord.extractForwardingPointer(forwardingWord);
+            } else {
+                if (VM.VERIFY_ASSERTIONS)
+                    VM.assertions._assert(regionLiveBytes.get(new Integer(regionOf(object).toInt())) != 0);
+
+                // object is not being forwarded, copy it
+                ObjectReference newObject = VM.objectModel.copy(object, allocator);
+                ForwardingWord.setForwardingPointer(object, newObject);
+                trace.processNode(newObject);
+
+                // TODO per region lock?
+                int newLiveBytes = regionLiveBytes.get(new Integer(regionOf(object).toInt())) - sizeOf(object);
+                regionLiveBytes.put(new Integer(regionOf(object).toInt()), newLiveBytes);
+                if (newLiveBytes == 0) {
+                    // if new live bytes is 0, the region is empty, it's available again
+                    lock.acquire();
+                    availableRegionCount++;
+                    availableRegion.set(availableRegionCount, regionOf(object));
+                    lock.release();
+                }
+                return newObject;
+            }
+        } else {
+            Word forwardingWord = ForwardingWord.attemptToForward(object);
+            if (!ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
+                trace.processNode(object);
+            }
+        }
+        // object is not in the collection set
         return object;
-
-    //     if (relocationRequired(regionOf(object))) {
-    //         Word forwardingWord = ForwardingWord.attemptToForward(object);
-    //         if (ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
-    //             while (ForwardingWord.stateIsBeingForwarded(forwardingWord))
-    //                 forwardingWord = VM.objectModel.readAvailableBitsWord(object);
-    //             return ForwardingWord.extractForwardingPointer(forwardingWord);
-    //         } else {
-    //             if (VM.VERIFY_ASSERTIONS)
-    //                 VM.assertions._assert(regionLiveBytes.get(regionOf(object).toInt()) != 0);
-
-    //             // object is not being forwarded, copy it
-    //             ObjectReference newObject = VM.objectModel.copy(object, allocator);
-    //             ForwardingWord.setForwardingPointer(object, newObject);
-    //             trace.processNode(newObject);
-
-    //             // TODO per region lock?
-    //             int newLiveBytes = regionLiveBytes.get(regionOf(object).toInt()) - sizeOf(object);
-    //             regionLiveBytes.put(regionOf(object).toInt(), newLiveBytes);
-    //             if (newLiveBytes == 0) {
-    //                 // if new live bytes is 0, the region is empty, it's available again
-    //                 lock.acquire();
-    //                 availableRegionCount++;
-    //                 availableRegion.set(availableRegionCount, regionOf(object));
-    //                 lock.release();
-    //             }
-    //             return newObject;
-    //         }
-    //     } else {
-    //         Word forwardingWord = ForwardingWord.attemptToForward(object);
-    //         if (!ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
-    //             trace.processNode(object);
-    //         }
-    //     }
-    //     // object is not in the collection set
-    //     return object;
     }
 }

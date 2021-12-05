@@ -39,16 +39,14 @@ public class RegionEvacuateLocal extends TraceLocal {
         if (object.isNull())
             return object;
         if (Space.isInSpace(Region.RS, object))
-            return object;
-            // return Region.regionSpace.traceEvacuateObject(this, object, Region.ALLOC_RS);
+            return Region.regionSpace.traceEvacuateObject(this, object, Region.ALLOC_RS);
         return super.traceObject(object);
     }
 
     @Override
     public boolean willNotMoveInCurrentCollection(ObjectReference object) {
         if (Space.isInSpace(Region.RS, object))
-            // return Region.regionSpace.relocationRequired(object);
-            return true;
+            return Region.regionSpace.relocationRequired(object);
         return super.willNotMoveInCurrentCollection(object);
     }
 }
