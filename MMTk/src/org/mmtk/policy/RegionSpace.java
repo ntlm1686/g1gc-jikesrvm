@@ -225,18 +225,18 @@ public class RegionSpace extends Space {
     private Address idealRegion(Address address) {
         int left = 0;
         int right = regionTable.length() - 1;
+        while (left <= right) {
+            int mid = (left + right) >>> 1;
+            // if (this.isRegionIdeal(regionTable.get(mid), address)) {
+            //     return regionTable.get(mid);
+            // }
+            if (regionTable.get(mid).toInt() > address.toInt()) {
+                right = mid - 1;
+            } else if (regionTable.get(mid).toInt() + REGION_SIZE < address.toInt()) {
+                left = mid + 1;
+            }
+        }
         return address;
-        // while (left <= right) {
-        //     int mid = (left + right) >>> 1;
-        //     if (this.isRegionIdeal(regionTable.get(mid), address)) {
-        //         return regionTable.get(mid);
-        //     }
-        //     if (regionTable.get(mid).toInt() > address.toInt()) {
-        //         right = mid - 1;
-        //     } else if (regionTable.get(mid).toInt() + REGION_SIZE < address.toInt()) {
-        //         left = mid + 1;
-        //     }
-        // }
     }
 
     /**
