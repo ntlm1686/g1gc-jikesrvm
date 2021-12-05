@@ -406,11 +406,6 @@ public class RegionSpace extends Space {
         return relocationRequired(region);
     }
 
-    @Inline
-    public boolean relocationRequired(ObjectReference object) {
-        return relocationRequired(regionOf(object));
-    }
-
     /**
      * Set all regions' live bytes to 0.
      */
