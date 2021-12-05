@@ -494,51 +494,6 @@ public class RegionSpace extends Space {
         return tempMap;
     }
 
-    /**
-     * Perform evacuation on this space, this method should be called
-     * by the global pool for now.
-     */
-    // public void evacuation(int allocator) {
-    //     for (Address regionAddress : collectionSet) {
-    //         this.scanTheRegion(regionAddress, allocator);
-    //     }
-    // }
-
-    // /**
-    //  * Author: Mahideep Tumati
-    //  * <p>
-    //  * linear scan/ evacuation an individual region .
-    //  *
-    //  * @param region start address
-    //  * @return
-    //  */
-    // public void scanTheRegion(Address regionAddress, int allocator) {
-    //     // Fetch data end using start address
-    //     Address dataEnd = RegionAllocator.getDataEnd(regionAddress);
-
-    //     // Check if offset is valid or not
-    //     ObjectReference currentObject = VM.objectModel.getObjectFromStartAddress(regionAddress.plus(DATA_START_OFFSET));
-    //     do {
-    //         /* Read end address first, as scan may be destructive */
-    //         Address currentObjectEnd = VM.objectModel.getObjectEndAddress(currentObject);
-
-    //         if (currentObjectEnd.GE(dataEnd)) {
-    //             /* We have scanned the last object */
-    //             break;
-    //         }
-
-    //         if (this.isLive(currentObject))
-    //             VM.objectModel.copy(currentObject, allocator);
-
-    //         // next object to scan
-    //         ObjectReference nextObj = VM.objectModel.getObjectFromStartAddress(currentObjectEnd);
-    //         if (VM.VERIFY_ASSERTIONS) {
-    //             /* Must be monotonically increasing */
-    //             VM.assertions._assert(nextObj.toAddress().GT(currentObject.toAddress()));
-    //         }
-    //         currentObject = nextObj;
-    //     } while (true);
-    // }
 
     /**
      * Another full heap tracing. Copying all live objects in selected regions.
