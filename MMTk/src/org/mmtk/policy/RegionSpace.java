@@ -402,8 +402,7 @@ public class RegionSpace extends Space {
      * @return
      */
     public boolean relocationRequired(ObjectReference object) {
-        return false;
-        // return requireRelocation.get(regionOf(object).toInt());
+        return Boolean.TRUE.equals(requireRelocation.get(new Integer(regionOf(object).toInt())));
     }
 
     /**
