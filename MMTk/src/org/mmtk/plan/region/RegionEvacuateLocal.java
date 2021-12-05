@@ -40,7 +40,7 @@ public class RegionEvacuateLocal extends TraceLocal {
             return object;
         if (Space.isInSpace(Region.RS, object))
             return object;
-            // return Region.regionSpace.traceEvacuateObject(this, object, Region.ALLOC_RS);
+            return Region.regionSpace.traceEvacuateObject(this, object, Region.ALLOC_RS);
         return super.traceObject(object);
     }
 
