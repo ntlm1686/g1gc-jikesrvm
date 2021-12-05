@@ -227,14 +227,15 @@ public class RegionSpace extends Space {
         int right = regionTable.length() - 1;
         while (left <= right) {
             int mid = (left + right) >>> 1;
+            left = mid + 1;
             // if (this.isRegionIdeal(regionTable.get(mid), address)) {
             //     return regionTable.get(mid);
             // }
-            if (regionTable.get(mid).toInt() > address.toInt()) {
-                right = mid - 1;
-            } else if (regionTable.get(mid).toInt() + REGION_SIZE < address.toInt()) {
-                left = mid + 1;
-            }
+            // if (regionTable.get(mid).toInt() > address.toInt()) {
+            //     right = mid - 1;
+            // } else if (regionTable.get(mid).toInt() + REGION_SIZE < address.toInt()) {
+            //     left = mid + 1;
+            // }
         }
         return address;
     }
