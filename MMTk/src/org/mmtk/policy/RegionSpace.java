@@ -401,9 +401,9 @@ public class RegionSpace extends Space {
      * @param region
      * @return
      */
-    public boolean relocationRequired(Address region) {
+    public boolean relocationRequired(ObjectReference object) {
         return false;
-        // return requireRelocation.get(region.toInt());
+        // return requireRelocation.get(regionOf(object).toInt());
     }
 
     /**
@@ -500,7 +500,7 @@ public class RegionSpace extends Space {
     public ObjectReference traceEvacuateObject(TransitiveClosure trace, ObjectReference object, int allocator) {
 
         return object;
-        // if (relocationRequired(regionOf(object))) {
+        // if (relocationRequired(object)) {
         //     Word forwardingWord = ForwardingWord.attemptToForward(object);
         //     if (ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
         //         while (ForwardingWord.stateIsBeingForwarded(forwardingWord))
