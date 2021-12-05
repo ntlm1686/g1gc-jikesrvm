@@ -236,7 +236,7 @@ public class RegionSpace extends Space {
                 left = mid + 1;
             }
         }
-        return address;
+        return Address.zero();
     }
 
     /**
