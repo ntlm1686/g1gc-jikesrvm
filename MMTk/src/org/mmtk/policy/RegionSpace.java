@@ -189,7 +189,7 @@ public class RegionSpace extends Space {
         boolean sorted = false;
         while(!sorted) {
             sorted = true;
-            for (int i = 0; i < sortedRegionTable.length() - 1; i++) {
+            for (int i = 0; i < REGION_NUMBER - 1; i++) {
                 if (sortedRegionTable.get(i).toLong() > sortedRegionTable.get(i+1).toLong()) {
                     sortedRegionTable.set(i, Address.fromLong(sortedRegionTable.get(i).toLong() + sortedRegionTable.get(i+1).toLong()));
                     sortedRegionTable.set(i+1, Address.fromLong(sortedRegionTable.get(i).toLong() - sortedRegionTable.get(i+1).toLong()));
@@ -226,16 +226,15 @@ public class RegionSpace extends Space {
         int left = 0;
         int right = REGION_NUMBER - 1;
         while (left <= right) {
-            int mid = (left + right) / 2;
-            left = mid + 1;
-            // if (this.isRegionIdeal(regionTable.get(mid), address)) {
-            //     return regionTable.get(mid);
-            // }
-            // if (regionTable.get(mid).toInt() > address.toInt()) {
-            //     right = mid - 1;
-            // } else if (regionTable.get(mid).toInt() + REGION_SIZE < address.toInt()) {
-            //     left = mid + 1;
-            // }
+            int mid = (left + right) >>> 1;
+            if (this.isRegionIdeal(regionTable.get(mid), address)) {
+                return regionTable.get(mid);
+            }
+            if (regionTable.get(mid).toInt() > address.toInt()) {
+                right = mid - 1;
+            } else if (regionTable.get(mid).toInt() + REGION_SIZE < address.toInt()) {
+                left = mid + 1;
+            }
         }
         return address;
     }
