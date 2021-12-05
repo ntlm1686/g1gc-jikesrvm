@@ -304,24 +304,24 @@ public class RegionSpace extends Space {
     public void updateCollectionSet() {
         // calculate dead Bytes from lives
         updateDeadBytesInformation();
-         regionDeadBytes = sortAddressMapByValueDesc(regionDeadBytes);
+        regionDeadBytes = sortAddressMapByValueDesc(regionDeadBytes);
 
-         int totalAvailableBytes = REGION_SIZE * availableRegionCount;
+        int totalAvailableBytes = REGION_SIZE * availableRegionCount;
 
-         int counter = 0;
-         for (Map.Entry<Integer, Integer> region : regionDeadBytes.entrySet()) {
-             if (regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
-             if (counter < availableRegionCount) {
-                collectionSet.add(region.getKey().toInt());
-                requireRelocation.put(region.getKey().toInt(), true);
-                // totalAvailableBytes -= regionLiveBytes.get(region.getKey());
-                counter++;
-            } else {
-                break;
+        int counter = 0;
+        for (Map.Entry<Integer, Integer> region : regionDeadBytes.entrySet()) {
+            if (regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
+                if (counter < availableRegionCount) {
+                    collectionSet.add(region.getKey().toInt());
+                    requireRelocation.put(region.getKey().toInt(), true);
+                    // totalAvailableBytes -= regionLiveBytes.get(region.getKey());
+                    counter++;
+                } else {
+                    break;
+                }
             }
         }
     }
-
      @Inline
      public void updateDeadBytesInformation() {
         for (Map.Entry<Integer, Integer> addressEntry : regionLiveBytes.entrySet()) {
