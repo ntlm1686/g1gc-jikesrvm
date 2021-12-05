@@ -312,8 +312,8 @@ public class RegionSpace extends Space {
         for (Map.Entry<Integer, Integer> region : regionDeadBytes.entrySet()) {
             if (regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
                 if (counter < availableRegionCount) {
-                    collectionSet.add(region.getKey().toInt());
-                    requireRelocation.put(region.getKey().toInt(), true);
+                    collectionSet.add(region.getKey());
+                    requireRelocation.put(region.getKey(), true);
                     // totalAvailableBytes -= regionLiveBytes.get(region.getKey());
                     counter++;
                 } else {
@@ -327,7 +327,7 @@ public class RegionSpace extends Space {
         for (Map.Entry<Integer, Integer> addressEntry : regionLiveBytes.entrySet()) {
             Address dataEnd = BumpPointer.getDataEnd(Address.fromLong(new Long(addressEntry.getKey())));
             regionDeadBytes.put(addressEntry.getKey(),
-                    (dataEnd.toInt() - addressEntry.getKey().toInt()) - addressEntry.getValue());
+                    (dataEnd.toInt() - addressEntry.getKey()) - addressEntry.getValue());
         }
     }
 
