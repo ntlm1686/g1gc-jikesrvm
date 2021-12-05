@@ -215,7 +215,7 @@ public class RegionSpace extends Space {
             regionTable.set(i, region);
             availableRegion.set(i, region);
         }
-        // this.sortTable();
+        this.sortTable();
     }
 
     private boolean isRegionIdeal(Address X, Address Y) {
@@ -474,68 +474,22 @@ public class RegionSpace extends Space {
      * @param Map of regions with key as start address and value as live/ dead bytes
      * @return Map of regions sorted based on value
      */
-    public static Map<Address, Integer> sortAddressMapByValueDesc(Map<Address, Integer> addressMap) {
-        List<Map.Entry<Address, Integer>> list = new LinkedList<Map.Entry<Address, Integer>>(addressMap.entrySet());
-        Collections.sort(list, new Comparator<Map.Entry<Address, Integer>>() {
-            @Override
-            public int compare(Map.Entry<Address, Integer> o1,
-                    Map.Entry<Address, Integer> o2) {
-                return (o2.getValue()).compareTo(o1.getValue());
-            }
-        });
+    // public static Map<Address, Integer> sortAddressMapByValueDesc(Map<Address, Integer> addressMap) {
+    //     List<Map.Entry<Address, Integer>> list = new LinkedList<Map.Entry<Address, Integer>>(addressMap.entrySet());
+    //     Collections.sort(list, new Comparator<Map.Entry<Address, Integer>>() {
+    //         @Override
+    //         public int compare(Map.Entry<Address, Integer> o1,
+    //                 Map.Entry<Address, Integer> o2) {
+    //             return (o2.getValue()).compareTo(o1.getValue());
+    //         }
+    //     });
 
-        Map<Address, Integer> tempMap = new LinkedHashMap<Address, Integer>();
-        for (Map.Entry<Address, Integer> address : list) {
-            tempMap.put(address.getKey(), address.getValue());
-        }
-        return tempMap;
-    }
-
-    /**
-     * Perform evacuation on this space, this method should be called
-     * by the global pool for now.
-     */
-    public void evacuation(int allocator) {
-        for (Address regionAddress : collectionSet) {
-            this.scanTheRegion(regionAddress, allocator);
-        }
-    }
-
-    /**
-     * Author: Mahideep Tumati
-     * <p>
-     * linear scan/ evacuation an individual region .
-     *
-     * @param region start address
-     * @return
-     */
-    public void scanTheRegion(Address regionAddress, int allocator) {
-        // Fetch data end using start address
-        Address dataEnd = RegionAllocator.getDataEnd(regionAddress);
-
-        // Check if offset is valid or not
-        ObjectReference currentObject = VM.objectModel.getObjectFromStartAddress(regionAddress.plus(DATA_START_OFFSET));
-        do {
-            /* Read end address first, as scan may be destructive */
-            Address currentObjectEnd = VM.objectModel.getObjectEndAddress(currentObject);
-
-            if (currentObjectEnd.GE(dataEnd)) {
-                /* We have scanned the last object */
-                break;
-            }
-
-            if (this.isLive(currentObject))
-                VM.objectModel.copy(currentObject, allocator);
-
-            // next object to scan
-            ObjectReference nextObj = VM.objectModel.getObjectFromStartAddress(currentObjectEnd);
-            if (VM.VERIFY_ASSERTIONS) {
-                /* Must be monotonically increasing */
-                VM.assertions._assert(nextObj.toAddress().GT(currentObject.toAddress()));
-            }
-            currentObject = nextObj;
-        } while (true);
-    }
+    //     Map<Address, Integer> tempMap = new LinkedHashMap<Address, Integer>();
+    //     for (Map.Entry<Address, Integer> address : list) {
+    //         tempMap.put(address.getKey(), address.getValue());
+    //     }
+    //     return tempMap;
+    // }
 
     /**
      * Another full heap tracing. Copying all live objects in selected regions.
