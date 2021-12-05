@@ -223,9 +223,9 @@ public class RegionSpace extends Space {
     }
 
     private Address idealRegion(Address address) {
+        int left = 0;
+        int right = regionTable.length() - 1;
         return address;
-        // int left = 0;
-        // int right = regionTable.length() - 1;
         // while (left <= right) {
         //     int mid = (left + right) >>> 1;
         //     if (this.isRegionIdeal(regionTable.get(mid), address)) {
