@@ -498,41 +498,40 @@ public class RegionSpace extends Space {
     @Inline
     public ObjectReference traceEvacuateObject(TransitiveClosure trace, ObjectReference object, int allocator) {
 
+        if (relocationRequired(object)) {
+            Word forwardingWord = ForwardingWord.attemptToForward(object);
+            if (ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
+                while (ForwardingWord.stateIsBeingForwarded(forwardingWord))
+                    forwardingWord = VM.objectModel.readAvailableBitsWord(object);
+                return ForwardingWord.extractForwardingPointer(forwardingWord);
+            } else {
+                if (VM.VERIFY_ASSERTIONS)
+                    VM.assertions._assert(Boolean.TRUE.equals(regionLiveBytes.get(new Integer(regionOf(object).toInt())) != new Integer(0)));
+
+                // object is not being forwarded, copy it
+                ObjectReference newObject = VM.objectModel.copy(object, allocator);
+                ForwardingWord.setForwardingPointer(object, newObject);
+                trace.processNode(newObject);
+
+                // TODO per region lock?
+                int newLiveBytes = regionLiveBytes.get(new Integer(regionOf(object).toInt())).intValue() - sizeOf(object);
+                regionLiveBytes.put(new Integer(regionOf(object).toInt()), new Integer(newLiveBytes));
+                if (newLiveBytes == 0) {
+                    // if new live bytes is 0, the region is empty, it's available again
+                    lock.acquire();
+                    availableRegionCount++;
+                    availableRegion.set(availableRegionCount, regionOf(object));
+                    lock.release();
+                }
+                return newObject;
+            }
+        } else {
+            Word forwardingWord = ForwardingWord.attemptToForward(object);
+            if (!ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
+                trace.processNode(object);
+            }
+        }
+        // object is not in the collection set
         return object;
-        // if (relocationRequired(object)) {
-        //     Word forwardingWord = ForwardingWord.attemptToForward(object);
-        //     if (ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
-        //         while (ForwardingWord.stateIsBeingForwarded(forwardingWord))
-        //             forwardingWord = VM.objectModel.readAvailableBitsWord(object);
-        //         return ForwardingWord.extractForwardingPointer(forwardingWord);
-        //     } else {
-        //         if (VM.VERIFY_ASSERTIONS)
-        //             VM.assertions._assert(regionLiveBytes.get(regionOf(object).toInt()) != 0);
-
-        //         // object is not being forwarded, copy it
-        //         ObjectReference newObject = VM.objectModel.copy(object, allocator);
-        //         ForwardingWord.setForwardingPointer(object, newObject);
-        //         trace.processNode(newObject);
-
-        //         // TODO per region lock?
-        //         int newLiveBytes = regionLiveBytes.get(regionOf(object).toInt()) - sizeOf(object);
-        //         regionLiveBytes.put(regionOf(object).toInt(), newLiveBytes);
-        //         if (newLiveBytes == 0) {
-        //             // if new live bytes is 0, the region is empty, it's available again
-        //             lock.acquire();
-        //             availableRegionCount++;
-        //             availableRegion.set(availableRegionCount, regionOf(object));
-        //             lock.release();
-        //         }
-        //         return newObject;
-        //     }
-        // } else {
-        //     Word forwardingWord = ForwardingWord.attemptToForward(object);
-        //     if (!ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
-        //         trace.processNode(object);
-        //     }
-        // }
-        // // object is not in the collection set
-        // return object;
     }
 }
