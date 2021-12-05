@@ -498,9 +498,6 @@ public class RegionSpace extends Space {
     @Inline
     public ObjectReference traceEvacuateObject(TransitiveClosure trace, ObjectReference object, int allocator) {
 
-        Word oldValue = VM.objectModel.prepareAvailableBits(object);
-        Word forwardingWord = ForwardingWord.attemptToForward(object);
-
         if (relocationRequired(regionOf(object))) {
             Word forwardingWord = ForwardingWord.attemptToForward(object);
             if (ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
