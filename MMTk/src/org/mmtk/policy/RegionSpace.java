@@ -18,7 +18,7 @@ import org.vmmagic.unboxed.*;
 
 import org.vmmagic.pragma.Uninterruptible;
 
-public class RegionSpace extends Space {
+@Uninterruptible public class RegionSpace extends Space {
 
     // Constraints
     public static final int LOCAL_GC_BITS_REQUIRED = 2;
@@ -103,7 +103,6 @@ public class RegionSpace extends Space {
      */
     @Override
     @Inline
-    @Uninterruptible
     public void release(Address start) {
         ((FreeListPageResource) pr).releasePages(start);
     }
@@ -123,7 +122,6 @@ public class RegionSpace extends Space {
 
     @Override
     @Inline
-    @Uninterruptible
     public ObjectReference traceObject(TransitiveClosure trace, ObjectReference object) {
         VM.assertions.fail("CopySpace.traceLocal called without allocator");
         return ObjectReference.nullReference();
@@ -134,7 +132,6 @@ public class RegionSpace extends Space {
      */
     @Override
     @Inline
-    @Uninterruptible
     public boolean isLive(ObjectReference object) {
         return testMarkState(object);
     }
