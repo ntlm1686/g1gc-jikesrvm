@@ -100,7 +100,6 @@ public class RegionSpace extends Space {
      * Release allocated pages.
      */
     @Override
-    @Inline
     public void release(Address start) {
         ((FreeListPageResource) pr).releasePages(start);
     }
@@ -119,7 +118,6 @@ public class RegionSpace extends Space {
     }
 
     @Override
-    @Inline
     public ObjectReference traceObject(TransitiveClosure trace, ObjectReference object) {
         VM.assertions.fail("CopySpace.traceLocal called without allocator");
         return ObjectReference.nullReference();
