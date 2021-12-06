@@ -115,6 +115,7 @@ import org.vmmagic.unboxed.*;
      * If an object is alive.
      */
     @Override
+    @Inline
     public boolean isLive(ObjectReference object) {
         return testMarkState(object);
     }
