@@ -14,8 +14,7 @@ import static org.mmtk.utility.Constants.MIN_ALIGNMENT;
  * |  Data End   | (Relocation) | Data --&gt
  * +-------------+--------------+-------------
  */
-@Uninterruptible
-public class RegionAllocator extends Allocator {
+@Uninterruptible public class RegionAllocator extends Allocator {
 
     // private static final Word BLOCK_MASK = null;
 
@@ -68,6 +67,7 @@ public class RegionAllocator extends Allocator {
         return start;
     }
 
+    @NoInline
     private Address allocSlow(Address start, Address end, int align, int offset) {
         return allocSlowInline(end.diff(start).toInt(), align, offset);
     }

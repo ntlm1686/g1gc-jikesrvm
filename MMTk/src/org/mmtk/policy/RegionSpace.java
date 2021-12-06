@@ -14,20 +14,18 @@ import org.mmtk.utility.heap.*;
 import org.mmtk.vm.Lock;
 import org.mmtk.vm.VM;
 import org.vmmagic.pragma.Inline;
+import org.vmmagic.pragma.Interruptible;
+import org.vmmagic.pragma.Uninterruptible;
 import org.vmmagic.unboxed.*;
 
-public class RegionSpace extends Space {
+@Uninterruptible public final class RegionSpace extends Space {
 
     // Constraints
     public static final int LOCAL_GC_BITS_REQUIRED = 2;
     public static final int GC_HEADER_WORDS_REQUIRED = 0;
-
     public static final boolean HEADER_MARK_BITS = VM.config.HEADER_MARK_BITS;
-    /**
-     * highest bit bits we may use
-     */
+    // highest bit bits we may use
     private static final int AVAILABLE_LOCAL_BITS = 8 - HeaderByte.USED_GLOBAL_BITS;
-
     private static final int COUNT_BASE = 0;
 
     /**
@@ -54,23 +52,14 @@ public class RegionSpace extends Space {
     protected final AddressArray regionTable = AddressArray.create(REGION_NUMBER);
     protected final AddressArray availableRegion = AddressArray.create(REGION_NUMBER);
 
-    // deprecated
-    protected final AddressArray consumedRegion = AddressArray.create(REGION_NUMBER);
-
     int availableRegionCount = 0;
-
-    // Before we implement the metadata, we use a map instead
-    // protected static Map<Address, Integer> regionLiveBytes = new HashMap<Address, Integer>();
-    // DeadBytes for every regio that is calcuoated before evacuation
-    // protected static Map<Address, Integer> regionDeadBytes = new HashMap<Address, Integer>();
+    int regionCount = 0;
 
     // Regions on which garbage collector will be executed
     protected static List<Integer> collectionSet = new ArrayList<Integer>();
 
     protected static Map<Integer, Integer> regionLiveBytes = new HashMap<Integer, Integer>();
     protected static Map<Integer, Integer> regionDeadBytes = new HashMap<Integer, Integer>();
-
-
 
     // protected final Map<Address, Boolean> requireRelocation = new HashMap<Address, Boolean>();
     protected final Map<Integer, Boolean> requireRelocation = new HashMap<Integer, Boolean>();
@@ -99,8 +88,6 @@ public class RegionSpace extends Space {
     /**
      * Release allocated pages.
      */
-    @Override
-    @Inline
     public void release(Address start) {
         ((FreeListPageResource) pr).releasePages(start);
     }
@@ -108,7 +95,6 @@ public class RegionSpace extends Space {
     /**
      * Release pages
      */
-    @Inline
     public void release() {
         for (Integer regionAddress : collectionSet) {
             release(Address.fromLong(new Long(regionAddress)));
@@ -151,16 +137,21 @@ public class RegionSpace extends Space {
     }
 
     /**
-     * Return a new region to the allocator.
+     * Give a new region to the allocator.
      *
      * @return
      */
+    @Inline
+    @Interruptible
     public Address getRegion() {
         lock.acquire();
         if (availableRegionCount == 0) {
-            // No available region
+            // no available region
+            Address newRegion = acquire(PAGES_PER_REGION);
+            regionTable.set(regionCount, newRegion);
+            regionCount++;
             lock.release();
-            return Address.zero();
+            return newRegion;
         }
         Address newRegion = availableRegion.get(availableRegionCount);
         availableRegionCount--;
@@ -169,15 +160,8 @@ public class RegionSpace extends Space {
     }
 
     /**
-     * Add a new region to this space.
+     * Sort regionTable by address
      */
-    @Inline
-    private Address addRegion() {
-        Address newRegion = acquire(PAGES_PER_REGION);
-        return newRegion;
-    }
-
-
     private void sortTable() {
         AddressArray sortedRegionTable = AddressArray.create(REGION_NUMBER);
         for (int i = 0; i < REGION_NUMBER; i++) {
