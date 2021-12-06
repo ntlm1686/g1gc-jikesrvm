@@ -16,6 +16,9 @@ import org.mmtk.vm.VM;
 import org.vmmagic.pragma.Inline;
 import org.vmmagic.unboxed.*;
 
+import org.vmmagic.pragma.Uninterruptible;
+
+@Uninterruptible
 public class RegionSpace extends Space {
 
     // Constraints
