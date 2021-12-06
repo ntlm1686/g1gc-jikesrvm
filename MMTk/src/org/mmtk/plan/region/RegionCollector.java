@@ -83,7 +83,7 @@ public class RegionCollector extends StopTheWorldCollector {
     }
 
     if (phaseId == Region.EVACUATE) {
-      eva.completeTrace();
+      // eva.completeTrace();
       return;
     }
 

@@ -1,6 +1,7 @@
 package org.mmtk.plan.region;
 
 import org.mmtk.plan.TraceLocal;
+
 import org.mmtk.plan.Trace;
 import org.mmtk.policy.Space;
 
@@ -44,6 +45,8 @@ public class RegionEvacuateLocal extends TraceLocal {
 
     @Override
     public boolean willNotMoveInCurrentCollection(ObjectReference object) {
-        return !Region.regionSpace.relocationRequired(object);
+        if (Space.isInSpace(Region.RS, object))
+            return Region.regionSpace.relocationRequired(object);
+        return super.willNotMoveInCurrentCollection(object);
     }
 }
