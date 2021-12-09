@@ -73,26 +73,26 @@ public class RegionCollector extends StopTheWorldCollector {
   @Inline
   @Override
   public final void collectionPhase(short phaseId, boolean primary) {
-    if (phaseId == Region.PREPARE) {
+    // if (phaseId == Region.PREPARE) {
 
-    }
+    // }
 
-    if (phaseId == Region.CLOSURE) {
-      trace.completeTrace();
-      return;
-    }
+    // if (phaseId == Region.CLOSURE) {
+    //   trace.completeTrace();
+    //   return;
+    // }
 
-    if (phaseId == Region.EVACUATE) {
-      // eva.completeTrace();
-      return;
-    }
+    // if (phaseId == Region.EVACUATE) {
+    //   // eva.completeTrace();
+    //   return;
+    // }
 
-    if (phaseId == Region.RELEASE) {
-      trace.release();
-      eva.release();
-    }
+    // if (phaseId == Region.RELEASE) {
+    //   trace.release();
+    //   eva.release();
+    // }
 
-    super.collectionPhase(phaseId, primary);
+    // super.collectionPhase(phaseId, primary);
   }
 
   /****************************************************************************

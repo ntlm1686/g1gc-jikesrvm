@@ -43,7 +43,7 @@ import org.vmmagic.unboxed.*;
 
     // TODO
     private static final int META_DATA_PAGES_PER_REGION = 0;
-    public static final int PAGES_PER_REGION = 256000;
+    public static final int PAGES_PER_REGION = 512;
     // public static final int PAGES_PER_REGION = 256;
     public static final int REGION_SIZE = BYTES_IN_PAGE * PAGES_PER_REGION;
     public static final Extent REGION_EXTENT = Word.fromIntZeroExtend(REGION_SIZE).toExtent();

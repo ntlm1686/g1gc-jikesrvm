@@ -89,23 +89,23 @@ public class Region extends StopTheWorld {
   @Inline
   @Override
   public final void collectionPhase(short phaseId) {
-    if (phaseId == PREPARE) {
-      regionSpace.prepare();
-      regionTrace.prepare();
-      evaTrace.prepare();
-    }
-    if (phaseId == CLOSURE) {
-      ;
-    }
+    // if (phaseId == PREPARE) {
+    //   regionSpace.prepare();
+    //   regionTrace.prepare();
+    //   evaTrace.prepare();
+    // }
+    // if (phaseId == CLOSURE) {
+    //   ;
+    // }
 
-    if (phaseId == UPDATE_COLLECTION_SET) {
-      updateCollectionSet();
-    }
+    // if (phaseId == UPDATE_COLLECTION_SET) {
+    //   updateCollectionSet();
+    // }
 
-    if (phaseId == RELEASE) {
-      regionSpace.release();
-    }
-    super.collectionPhase(phaseId);
+    // if (phaseId == RELEASE) {
+    //   regionSpace.release();
+    // }
+    // super.collectionPhase(phaseId);
   }
 
   /*****************************************************************************
