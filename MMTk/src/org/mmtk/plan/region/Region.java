@@ -13,6 +13,7 @@
 package org.mmtk.plan.region;
 
 import org.mmtk.plan.*;
+import org.mmtk.policy.ImmortalSpace;
 import org.mmtk.policy.RegionSpace;
 import org.mmtk.utility.Conversions;
 import org.mmtk.utility.heap.VMRequest;
@@ -57,6 +58,10 @@ public class Region extends StopTheWorld {
    */
   public final static RegionSpace regionSpace = new RegionSpace("region", VMRequest.discontiguous());
   public static final int RS = regionSpace.getDescriptor();
+
+  // * For debug
+  public final static ImmortalSpace imospace = new ImmortalSpace("immortal", VMRequest.discontiguous());
+  public static final int IM = imospace.getDescriptor();
 
   /*****************************************************************************
    * Instance variables

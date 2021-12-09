@@ -2,6 +2,7 @@ package org.mmtk.utility.alloc;
 
 import org.mmtk.policy.RegionSpace;
 import org.mmtk.policy.Space;
+import org.mmtk.utility.Log;
 import org.vmmagic.pragma.*;
 import org.vmmagic.unboxed.*;
 
@@ -16,7 +17,7 @@ import static org.mmtk.utility.Constants.MIN_ALIGNMENT;
  */
 @Uninterruptible public class RegionAllocator extends Allocator {
 
-    // private static final Word BLOCK_MASK = null;
+    private static final int SIZE_OF_TWO_X86_CACHE_LINES_IN_BYTES = 128;
 
     /** space this bump pointer is associated with */
     protected RegionSpace space;
@@ -54,15 +55,23 @@ import static org.mmtk.utility.Constants.MIN_ALIGNMENT;
 
     @Inline
     public final Address alloc(int bytes, int align, int offset) {
+        Log.writeln("[alloc] enter: ", bytes);
         Address start = alignAllocationNoFill(cursor, align, offset);
         Address end = start.plus(bytes);
 
         // can this object fit in the current region?
-        if (end.GT(limit))
+        // Log.writeln("[alloc] limit: ", limit.toInt());
+        // Log.writeln("[alloc] end: ", end.toInt());
+        if (end.GT(limit)){
+            Log.writeln("[alloc] go to slow path");
             return allocSlow(start, end, align, offset);
+        }
 
         fillAlignmentGap(cursor, start);
+        Log.write("[alloc] cursor: " ,cursor.toInt());
         cursor = end;
+        end.plus(SIZE_OF_TWO_X86_CACHE_LINES_IN_BYTES).prefetch();
+        Log.writeln(" -> ", cursor.toInt());
         setDataEnd(region, cursor);
         return start;
     }
@@ -77,20 +86,25 @@ import static org.mmtk.utility.Constants.MIN_ALIGNMENT;
      */
     @Override
     protected Address allocSlowOnce(int bytes, int alignment, int offset) {
-        if (!cursor.isZero()) {
-            this.reset();
-        }
-        // get a new region
-        Address start = space.getRegion();
-        if (start.isZero())
-            return start; // failed allocation
+        Log.writeln("[allocSlowOnce] enter");
 
-        // assume the region is not contiguous
-        cursor = start;
+        Log.writeln("[allocSlowOnce] try to get region from pool");
+        Address start = space.getRegion();
+        if (start.isZero()) {
+            Log.writeln("[allocSlowOnce] pool has no region, exit");
+            return start; // failed allocation
+        }
+
+        Log.writeln("[allocSlowOnce] pool gave a new region");
 
         // update limit
         updateMetaData(start);
-        limit = start.plus(RegionSpace.REGION_SIZE);
+        cursor = region.plus(DATA_START_OFFSET);
+        limit = start.plus(RegionSpace.REGION_EXTENT);
+        Log.writeln("[allocSlowOnce] new limit: ", limit.toInt());
+
+
+        Log.writeln("[allocSlowOnce] region info updated, entering alloc");
         return alloc(bytes, alignment, offset);
     }
 
@@ -101,10 +115,9 @@ import static org.mmtk.utility.Constants.MIN_ALIGNMENT;
      */
     @Inline
     private void updateMetaData(Address start) {
-        setDataEnd(region, cursor); // data end of current region
-
+        Log.writeln("[updateMetaData] enter");
         region = start; // setup new region
-        cursor = region.plus(DATA_START_OFFSET);
+        setDataEnd(region, cursor); // data end of current region
     }
 
     /**

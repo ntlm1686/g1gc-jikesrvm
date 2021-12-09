@@ -43,9 +43,15 @@ import org.vmmagic.unboxed.*;
 
     // TODO
     private static final int META_DATA_PAGES_PER_REGION = 0;
-    public static final int PAGES_PER_REGION = 256;
+    public static final int PAGES_PER_REGION = 256000;
+    // public static final int PAGES_PER_REGION = 256;
     public static final int REGION_SIZE = BYTES_IN_PAGE * PAGES_PER_REGION;
+    public static final Extent REGION_EXTENT = Word.fromIntZeroExtend(REGION_SIZE).toExtent();
     public static final int REGION_NUMBER = 1000;
+
+    // public static final Extent REGION_SIZE = Word.fromIntZeroExtend(1024).toExtent();
+    // public static final int PAGE_NUMBER = Conversions.bytesToPages(REGION_SIZE);
+
 
     protected final Lock lock = VM.newLock("RegionSpaceGloabl");
     // TODO replace with shared queue?
@@ -145,18 +151,36 @@ import org.vmmagic.unboxed.*;
     @Inline
     @Interruptible
     public Address getRegion() {
+        Log.writeln("[getRegion] enter");
+
         lock.acquire();
         if (availableRegionCount == 0) {
+            lock.release();
             // no available region
+            // Address newRegion = acquire(10000);
+
+            Log.writeln("[getRegion] pool has no available region, try to acquire pages");
             Address newRegion = acquire(PAGES_PER_REGION);
+            Log.writeln("[getRegion] new region: ", newRegion.toInt());
+            if (newRegion.EQ(Address.zero())) {
+                Log.writeln("[getRegion] acquire failed, exit");
+            } else {
+                Log.writeln("[getRegion] acquire success, exit");
+            }
+            Log.writeln("[getRegion] acquire ends");
+                
+            lock.acquire();
             regionTable.set(regionCount, newRegion);
             regionCount++;
             lock.release();
             return newRegion;
         }
+        Log.writeln("[getRegion] pool has available regions, exit");
         Address newRegion = availableRegion.get(availableRegionCount);
         availableRegionCount--;
         lock.release();
+
+        VM.assertions._assert(availableRegionCount >= 0);
         return newRegion;
     }
 
@@ -194,7 +218,7 @@ import org.vmmagic.unboxed.*;
     private void initializeRegions() {
         for (int i = 0; i < REGION_NUMBER; i++) {
             Address region = Address.zero();
-            availableRegionCount++;
+            // availableRegionCount++;
             regionTable.set(i, region);
             availableRegion.set(i, region);
         }

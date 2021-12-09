@@ -13,6 +13,7 @@
 package org.mmtk.plan.region;
 
 import org.mmtk.plan.StopTheWorldMutator;
+import org.mmtk.policy.ImmortalLocal;
 import org.mmtk.policy.RegionLocal;
 import org.mmtk.policy.Space;
 import org.mmtk.utility.alloc.Allocator;
@@ -47,9 +48,11 @@ public class RegionMutator extends StopTheWorldMutator {
    *
    */
   protected final RegionLocal rl;
+  protected final ImmortalLocal il;
 
   public RegionMutator() {
     rl = new RegionLocal(Region.regionSpace);
+    il = new ImmortalLocal(Region.imospace);
   }
 
   /****************************************************************************
@@ -64,6 +67,7 @@ public class RegionMutator extends StopTheWorldMutator {
   public Address alloc(int bytes, int align, int offset, int allocator, int site) {
     if (allocator == Region.ALLOC_DEFAULT) {
       return rl.alloc(bytes, align, offset);
+      // return il.alloc(bytes, align, offset);
     }
     return super.alloc(bytes, align, offset, allocator, site);
   }

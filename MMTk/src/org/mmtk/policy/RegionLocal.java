@@ -7,7 +7,6 @@ import org.vmmagic.pragma.*;
 
     public RegionLocal(RegionSpace space) {
         super(space);
-        //TODO Auto-generated constructor stub
     }
 
 }
