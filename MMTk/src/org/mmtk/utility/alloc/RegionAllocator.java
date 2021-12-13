@@ -55,7 +55,7 @@ import static org.mmtk.utility.Constants.MIN_ALIGNMENT;
 
     @Inline
     public final Address alloc(int bytes, int align, int offset) {
-        Log.writeln("[alloc] enter: ", bytes);
+        // Log.writeln("[alloc] enter: ", bytes);
         Address start = alignAllocationNoFill(cursor, align, offset);
         Address end = start.plus(bytes);
 
@@ -68,10 +68,10 @@ import static org.mmtk.utility.Constants.MIN_ALIGNMENT;
         }
 
         fillAlignmentGap(cursor, start);
-        Log.write("[alloc] cursor: " ,cursor.toInt());
+        // Log.write("[alloc] cursor: " ,cursor.toInt());
         cursor = end;
         end.plus(SIZE_OF_TWO_X86_CACHE_LINES_IN_BYTES).prefetch();
-        Log.writeln(" -> ", cursor.toInt());
+        // Log.writeln(" -> ", cursor.toInt());
         setDataEnd(region, cursor);
         return start;
     }

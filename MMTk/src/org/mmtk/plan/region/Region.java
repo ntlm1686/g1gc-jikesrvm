@@ -16,6 +16,7 @@ import org.mmtk.plan.*;
 import org.mmtk.policy.ImmortalSpace;
 import org.mmtk.policy.RegionSpace;
 import org.mmtk.utility.Conversions;
+import org.mmtk.utility.Log;
 import org.mmtk.utility.heap.VMRequest;
 
 import org.vmmagic.pragma.*;
@@ -89,11 +90,12 @@ public class Region extends StopTheWorld {
   @Inline
   @Override
   public final void collectionPhase(short phaseId) {
-    // if (phaseId == PREPARE) {
-    //   regionSpace.prepare();
-    //   regionTrace.prepare();
-    //   evaTrace.prepare();
-    // }
+    if (phaseId == PREPARE) {
+      Log.writeln("<Region> regionSpace.prepare");
+      regionSpace.prepare();
+      // regionTrace.prepare();
+      // evaTrace.prepare();
+    }
     // if (phaseId == CLOSURE) {
     //   ;
     // }

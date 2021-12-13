@@ -86,9 +86,6 @@ import org.vmmagic.unboxed.*;
         } else {
             pr = new MonotonePageResource(this, start, extent, META_DATA_PAGES_PER_REGION);
         }
-        this.initializeRegions();
-        this.resetRegionLiveBytes();
-        this.resetRequireRelocation();
     }
 
     /**
@@ -131,11 +128,15 @@ import org.vmmagic.unboxed.*;
      */
     public void prepare() {
         // flip the mark bit
+        Log.writeln("[prepare] flip mark bit");
         allocState = markState;
         markState = deltaMarkState(true);
 
         // reset the regions' info
 
+        Log.writeln("[prepare] sort table");
+        this.sortTable();
+        Log.writeln("[prepare] reset maps");
         this.resetRegionLiveBytes();
         this.resetRequireRelocation();
         this.resetRegionDeadBytes();
@@ -171,6 +172,15 @@ import org.vmmagic.unboxed.*;
                 
             lock.acquire();
             regionTable.set(regionCount, newRegion);
+
+            // regionLiveBytes.put(newRegion.toInt(), 0);
+            // regionDeadBytes.put(newRegion.toInt(), 0);
+            // requireRelocation.put(newRegion.toInt(), false);
+            regionLiveBytes.put(Address.zero().toInt(), 0);
+            regionDeadBytes.put(Address.zero().toInt(), 0);
+            requireRelocation.put(Address.zero().toInt(), false);
+
+
             regionCount++;
             lock.release();
             return newRegion;
@@ -217,12 +227,11 @@ import org.vmmagic.unboxed.*;
     @Inline
     private void initializeRegions() {
         for (int i = 0; i < REGION_NUMBER; i++) {
-            Address region = Address.zero();
             // availableRegionCount++;
-            regionTable.set(i, region);
-            availableRegion.set(i, region);
+            regionTable.set(i, Address.zero());
+            availableRegion.set(i, Address.zero());
         }
-        this.sortTable();
+        // this.sortTable();
     }
 
     private boolean isRegionIdeal(Address X, Address Y) {
@@ -419,8 +428,8 @@ import org.vmmagic.unboxed.*;
     @Inline
     private void resetRegionLiveBytes() {
         // assert regionTable has been initialized
-        for (int i = 0; i < REGION_NUMBER; i++) {
-            regionLiveBytes.put(Address.zero().toInt(), 0);
+        for (int i = 0; i < regionCount; i++) {
+            regionLiveBytes.put(regionTable.get(i).toInt(), 0);
         }
     }
 
@@ -430,7 +439,7 @@ import org.vmmagic.unboxed.*;
     @Inline
     private void resetRegionDeadBytes() {
         // assert regionTable has been initialized
-        for (int i = 0; i < REGION_NUMBER; i++) {
+        for (int i = 0; i < regionCount; i++) {
             regionDeadBytes.put(regionTable.get(i).toInt(), 0);
         }
     }
@@ -441,7 +450,7 @@ import org.vmmagic.unboxed.*;
     @Inline
     private void resetRequireRelocation() {
         // assert regionTable has been initialized
-        for (int i = 0; i < REGION_NUMBER; i++) {
+        for (int i = 0; i < regionCount; i++) {
             requireRelocation.put(regionTable.get(i).toInt(), false);
         }
     }
