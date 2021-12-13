@@ -1,5 +1,6 @@
 package org.mmtk.policy;
 
+import java.beans.PropertyVetoException;
 import java.util.*;
 
 import static org.mmtk.utility.Constants.BYTES_IN_PAGE;
@@ -64,11 +65,14 @@ import org.vmmagic.unboxed.*;
     // Regions on which garbage collector will be executed
     protected static List<Integer> collectionSet = new ArrayList<Integer>();
 
-    protected static Map<Integer, Integer> regionLiveBytes = new HashMap<Integer, Integer>();
-    protected static Map<Integer, Integer> regionDeadBytes = new HashMap<Integer, Integer>();
+    // protected static Map<Integer, Integer> regionLiveBytes = new HashMap<Integer, Integer>();
+    // protected static Map<Integer, Integer> regionDeadBytes = new HashMap<Integer, Integer>();
+    // protected final Map<Integer, Boolean> requireRelocation = new HashMap<Integer, Boolean>();
 
-    // protected final Map<Address, Boolean> requireRelocation = new HashMap<Address, Boolean>();
-    protected final Map<Integer, Boolean> requireRelocation = new HashMap<Integer, Boolean>();
+
+    private final int[] regionDeadBytes = new int[REGION_NUMBER];
+    private final int[] regionLiveBytes = new int[REGION_NUMBER];
+    private final boolean[] requireRelocation  = new boolean[REGION_NUMBER];
 
     // constructor
     public RegionSpace(String name, VMRequest vmRequest) {
@@ -176,10 +180,6 @@ import org.vmmagic.unboxed.*;
             // regionLiveBytes.put(newRegion.toInt(), 0);
             // regionDeadBytes.put(newRegion.toInt(), 0);
             // requireRelocation.put(newRegion.toInt(), false);
-            regionLiveBytes.put(Address.zero().toInt(), 0);
-            regionDeadBytes.put(Address.zero().toInt(), 0);
-            requireRelocation.put(Address.zero().toInt(), false);
-
 
             regionCount++;
             lock.release();
@@ -231,7 +231,6 @@ import org.vmmagic.unboxed.*;
             regionTable.set(i, Address.zero());
             availableRegion.set(i, Address.zero());
         }
-        // this.sortTable();
     }
 
     private boolean isRegionIdeal(Address X, Address Y) {
@@ -262,9 +261,10 @@ import org.vmmagic.unboxed.*;
      * @return
      */
     @Inline
-    public Address regionOf(ObjectReference object) {
-        Address address = object.toAddress();
-        return this.idealRegion(address);
+    public int regionOf(ObjectReference object) {
+        // Address address = object.toAddress();
+        // return this.idealRegion(address);
+        return 0;
     }
 
     /**
@@ -278,7 +278,7 @@ import org.vmmagic.unboxed.*;
     @Inline
     public ObjectReference traceObject(TransitiveClosure trace, ObjectReference object, int allocator) {
         if (testAndMark(object)) {
-            Address region = regionOf(object);
+            int region = regionOf(object);
             updateRegionliveBytes(region, object);
             trace.processNode(object);
         }
@@ -318,33 +318,34 @@ import org.vmmagic.unboxed.*;
      */
     @Inline
     public void updateCollectionSet() {
-        // calculate dead Bytes from lives
-        updateDeadBytesInformation();
-        regionDeadBytes = sortAddressMapByValueDesc(regionDeadBytes);
+        // // calculate dead Bytes from lives
+        // updateDeadBytesInformation();
+        // regionDeadBytes = sortAddressMapByValueDesc(regionDeadBytes);
 
-        int totalAvailableBytes = REGION_SIZE * availableRegionCount;
+        // int totalAvailableBytes = REGION_SIZE * availableRegionCount;
 
-        int counter = 0;
-        for (Map.Entry<Integer, Integer> region : regionDeadBytes.entrySet()) {
-            if (regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
-                if (counter < availableRegionCount) {
-                    collectionSet.add(region.getKey());
-                    requireRelocation.put(region.getKey(), true);
-                    // totalAvailableBytes -= regionLiveBytes.get(region.getKey());
-                    counter++;
-                } else {
-                    break;
-                }
-            }
-        }
+        // int counter = 0;
+        // for (Map.Entry<Integer, Integer> region : regionDeadBytes.entrySet()) {
+        //     if (regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
+        //         if (counter < availableRegionCount) {
+        //             collectionSet.add(region.getKey());
+        //             requireRelocation.put(region.getKey(), true);
+        //             // totalAvailableBytes -= regionLiveBytes.get(region.getKey());
+        //             counter++;
+        //         } else {
+        //             break;
+        //         }
+        //     }
+        // }
     }
+
      @Inline
      public void updateDeadBytesInformation() {
-        for (Map.Entry<Integer, Integer> addressEntry : regionLiveBytes.entrySet()) {
-            Address dataEnd = BumpPointer.getDataEnd(Address.fromLong(new Long(addressEntry.getKey())));
-            regionDeadBytes.put(addressEntry.getKey(),
-                    (dataEnd.toInt() - addressEntry.getKey()) - addressEntry.getValue());
-        }
+        // for (Map.Entry<Integer, Integer> addressEntry : regionLiveBytes.entrySet()) {
+        //     Address dataEnd = BumpPointer.getDataEnd(Address.fromLong(new Long(addressEntry.getKey())));
+        //     regionDeadBytes.put(addressEntry.getKey(),
+        //             (dataEnd.toInt() - addressEntry.getKey()) - addressEntry.getValue());
+        // }
     }
 
     /**
@@ -419,7 +420,7 @@ import org.vmmagic.unboxed.*;
      * @return
      */
     public boolean relocationRequired(ObjectReference object) {
-        return Boolean.TRUE.equals(requireRelocation.get(new Integer(regionOf(object).toInt())));
+        return Boolean.TRUE.equals(requireRelocation[regionOf(object)]);
     }
 
     /**
@@ -429,7 +430,7 @@ import org.vmmagic.unboxed.*;
     private void resetRegionLiveBytes() {
         // assert regionTable has been initialized
         for (int i = 0; i < regionCount; i++) {
-            regionLiveBytes.put(regionTable.get(i).toInt(), 0);
+            regionLiveBytes[i] = 0;
         }
     }
 
@@ -440,7 +441,7 @@ import org.vmmagic.unboxed.*;
     private void resetRegionDeadBytes() {
         // assert regionTable has been initialized
         for (int i = 0; i < regionCount; i++) {
-            regionDeadBytes.put(regionTable.get(i).toInt(), 0);
+            regionDeadBytes[i] = 0;
         }
     }
 
@@ -451,7 +452,7 @@ import org.vmmagic.unboxed.*;
     private void resetRequireRelocation() {
         // assert regionTable has been initialized
         for (int i = 0; i < regionCount; i++) {
-            requireRelocation.put(regionTable.get(i).toInt(), false);
+            requireRelocation[i] = false;
         }
     }
 
@@ -462,9 +463,9 @@ import org.vmmagic.unboxed.*;
      * @param object
      */
     @Inline
-    private void updateRegionliveBytes(Address region, ObjectReference object) {
+    private void updateRegionliveBytes(int region, ObjectReference object) {
         // update the region's live bytes
-        regionLiveBytes.put(region.toInt(), sizeOf(object) + regionLiveBytes.get(region.toInt()));
+        regionLiveBytes[region] += sizeOf(object);
     }
 
     /**
@@ -516,40 +517,40 @@ import org.vmmagic.unboxed.*;
     @Inline
     public ObjectReference traceEvacuateObject(TransitiveClosure trace, ObjectReference object, int allocator) {
 
-        if (relocationRequired(object)) {
-            Word forwardingWord = ForwardingWord.attemptToForward(object);
-            if (ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
-                while (ForwardingWord.stateIsBeingForwarded(forwardingWord))
-                    forwardingWord = VM.objectModel.readAvailableBitsWord(object);
-                return ForwardingWord.extractForwardingPointer(forwardingWord);
-            } else {
-                if (VM.VERIFY_ASSERTIONS)
-                    VM.assertions._assert(regionLiveBytes.get(new Integer(regionOf(object).toInt())) != 0);
+    //     if (relocationRequired(object)) {
+    //         Word forwardingWord = ForwardingWord.attemptToForward(object);
+    //         if (ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
+    //             while (ForwardingWord.stateIsBeingForwarded(forwardingWord))
+    //                 forwardingWord = VM.objectModel.readAvailableBitsWord(object);
+    //             return ForwardingWord.extractForwardingPointer(forwardingWord);
+    //         } else {
+    //             if (VM.VERIFY_ASSERTIONS)
+    //                 VM.assertions._assert(regionLiveBytes.get(new Integer(regionOf(object).toInt())) != 0);
 
-                // object is not being forwarded, copy it
-                ObjectReference newObject = VM.objectModel.copy(object, allocator);
-                ForwardingWord.setForwardingPointer(object, newObject);
-                trace.processNode(newObject);
+    //             // object is not being forwarded, copy it
+    //             ObjectReference newObject = VM.objectModel.copy(object, allocator);
+    //             ForwardingWord.setForwardingPointer(object, newObject);
+    //             trace.processNode(newObject);
 
-                // TODO per region lock?
-                int newLiveBytes = regionLiveBytes.get(new Integer(regionOf(object).toInt())) - sizeOf(object);
-                regionLiveBytes.put(new Integer(regionOf(object).toInt()), newLiveBytes);
-                if (newLiveBytes == 0) {
-                    // if new live bytes is 0, the region is empty, it's available again
-                    lock.acquire();
-                    availableRegionCount++;
-                    availableRegion.set(availableRegionCount, regionOf(object));
-                    lock.release();
-                }
-                return newObject;
-            }
-        } else {
-            Word forwardingWord = ForwardingWord.attemptToForward(object);
-            if (!ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
-                trace.processNode(object);
-            }
-        }
-        // object is not in the collection set
+    //             // TODO per region lock?
+    //             int newLiveBytes = regionLiveBytes.get(new Integer(regionOf(object).toInt())) - sizeOf(object);
+    //             regionLiveBytes.put(new Integer(regionOf(object).toInt()), newLiveBytes);
+    //             if (newLiveBytes == 0) {
+    //                 // if new live bytes is 0, the region is empty, it's available again
+    //                 lock.acquire();
+    //                 availableRegionCount++;
+    //                 availableRegion.set(availableRegionCount, regionOf(object));
+    //                 lock.release();
+    //             }
+    //             return newObject;
+    //         }
+    //     } else {
+    //         Word forwardingWord = ForwardingWord.attemptToForward(object);
+    //         if (!ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
+    //             trace.processNode(object);
+    //         }
+    //     }
+    //     // object is not in the collection set
         return object;
     }
 }
