@@ -243,6 +243,7 @@ import org.vmmagic.unboxed.*;
                 return i;
             }
         }
+        return 0;
     }
 
     /**
