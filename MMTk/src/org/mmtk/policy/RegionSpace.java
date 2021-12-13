@@ -139,7 +139,7 @@ import org.vmmagic.unboxed.*;
         // reset the regions' info
 
         Log.writeln("[prepare] sort table");
-        this.sortTable();
+        // this.sortTable();
         Log.writeln("[prepare] reset maps");
         this.resetRegionLiveBytes();
         this.resetRequireRelocation();
@@ -238,20 +238,11 @@ import org.vmmagic.unboxed.*;
     }
 
     private int idealRegion(Address address) {
-        int left = 0;
-        int right = REGION_NUMBER - 1;
-        while (left <= right) {
-            int mid = (left + right) >>> 1;
-            if (this.isRegionIdeal(regionTable.get(mid), address)) {
-                return mid;
-            }
-            if (regionTable.get(mid).toInt() > address.toInt()) {
-                right = mid - 1;
-            } else if (regionTable.get(mid).toInt() + REGION_SIZE < address.toInt()) {
-                left = mid + 1;
+        for (int i = 0; i < REGION_NUMBER; i++) {
+            if (isRegionIdeal(regionTable.get(i), address)) {
+                return i;
             }
         }
-        return 0;
     }
 
     /**
