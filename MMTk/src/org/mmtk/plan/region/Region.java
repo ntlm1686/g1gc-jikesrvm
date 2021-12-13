@@ -104,9 +104,10 @@ public class Region extends StopTheWorld {
     //   updateCollectionSet();
     // }
 
-    // if (phaseId == RELEASE) {
+    if (phaseId == RELEASE) {
     //   regionSpace.release();
-    // }
+      regionSpace.debug_info();
+    }
     // super.collectionPhase(phaseId);
   }
 

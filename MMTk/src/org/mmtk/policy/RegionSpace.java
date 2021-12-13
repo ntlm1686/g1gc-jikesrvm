@@ -8,6 +8,7 @@ import static org.mmtk.utility.alloc.RegionAllocator.DATA_START_OFFSET;
 
 import org.mmtk.utility.options.Options;
 import org.mmtk.plan.TransitiveClosure;
+import org.mmtk.plan.region.RegionConstraints;
 import org.mmtk.utility.*;
 import org.mmtk.utility.alloc.BumpPointer;
 import org.mmtk.utility.alloc.RegionAllocator;
@@ -132,15 +133,15 @@ import org.vmmagic.unboxed.*;
      */
     public void prepare() {
         // flip the mark bit
-        Log.writeln("[prepare] flip mark bit");
+        Log.writeln("[prepare] enter");
         allocState = markState;
         markState = deltaMarkState(true);
+        Log.writeln("[prepare] allocState: ", allocState);
+        Log.writeln("[prepare] markState: ", markState);
 
         // reset the regions' info
 
-        Log.writeln("[prepare] sort table");
         this.sortTable();
-        Log.writeln("[prepare] reset maps");
         this.resetRegionLiveBytes();
         this.resetRequireRelocation();
         this.resetRegionDeadBytes();
@@ -552,5 +553,21 @@ import org.vmmagic.unboxed.*;
     //     }
     //     // object is not in the collection set
         return object;
+    }
+
+    public void debug_info() {
+        Log.writeln("************ ARRAY INFO ************");
+        Log.writeln("Total region: ", regionCount);
+
+        for (int i=0; i<regionCount; i++) {
+            Log.write("region: ", i);
+            Log.write(", live bytes: ", regionLiveBytes[i]);
+            Log.write(", dead bytes: ", regionDeadBytes[i]);
+            int isRequired = requireRelocation[i] ? 1 : 0;
+            Log.write(", require relocation: ", isRequired);
+            Log.writeln();
+        }
+
+        Log.writeln("************    END     ************");
     }
 }
