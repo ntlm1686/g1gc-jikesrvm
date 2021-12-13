@@ -237,13 +237,13 @@ import org.vmmagic.unboxed.*;
         return (X.toInt() < Y.toInt()) && (X.toInt() + REGION_SIZE >= Y.toInt());
     }
 
-    private Address idealRegion(Address address) {
+    private int idealRegion(Address address) {
         int left = 0;
         int right = REGION_NUMBER - 1;
         while (left <= right) {
             int mid = (left + right) >>> 1;
             if (this.isRegionIdeal(regionTable.get(mid), address)) {
-                return regionTable.get(mid);
+                return mid;
             }
             if (regionTable.get(mid).toInt() > address.toInt()) {
                 right = mid - 1;
@@ -251,7 +251,7 @@ import org.vmmagic.unboxed.*;
                 left = mid + 1;
             }
         }
-        return Address.zero();
+        return 0;
     }
 
     /**
@@ -262,9 +262,8 @@ import org.vmmagic.unboxed.*;
      */
     @Inline
     public int regionOf(ObjectReference object) {
-        // Address address = object.toAddress();
-        // return this.idealRegion(address);
-        return 0;
+        Address address = object.toAddress();
+        return this.idealRegion(address);
     }
 
     /**
