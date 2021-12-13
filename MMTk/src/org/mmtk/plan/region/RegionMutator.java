@@ -99,7 +99,7 @@ public class RegionMutator extends StopTheWorldMutator {
   @Override
   public final void collectionPhase(short phaseId, boolean primary) {
     if (phaseId == Region.PREPARE) {
-      // rl.reset(); // return the region to the global pool, since it might be evacuated later.
+      rl.reset(); // return the region to the global pool, since it might be evacuated later.
     }
 
     // if (phaseId == Region.RELEASE) {

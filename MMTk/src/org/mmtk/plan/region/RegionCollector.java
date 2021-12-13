@@ -74,13 +74,13 @@ public class RegionCollector extends StopTheWorldCollector {
   @Override
   public final void collectionPhase(short phaseId, boolean primary) {
     if (phaseId == Region.PREPARE) {
-      // rl.reset();
+      rl.reset();
     }
 
-    // if (phaseId == Region.CLOSURE) {
-    //   trace.completeTrace();
-    //   return;
-    // }
+    if (phaseId == Region.CLOSURE) {
+      trace.completeTrace();
+      return;
+    }
 
     // if (phaseId == Region.EVACUATE) {
     //   // eva.completeTrace();
