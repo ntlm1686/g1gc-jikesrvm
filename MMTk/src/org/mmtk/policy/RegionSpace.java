@@ -3,6 +3,8 @@ package org.mmtk.policy;
 import java.util.*;
 
 import static org.mmtk.utility.Constants.BYTES_IN_PAGE;
+import static org.mmtk.utility.alloc.RegionAllocator.DATA_END_OFFSET;
+import static org.mmtk.utility.alloc.RegionAllocator.DATA_START_OFFSET;
 
 import org.mmtk.plan.TransitiveClosure;
 import org.mmtk.utility.*;
@@ -24,19 +26,17 @@ import org.vmmagic.unboxed.*;
     private static final int AVAILABLE_LOCAL_BITS = 8 - HeaderByte.USED_GLOBAL_BITS;
     private static final int COUNT_BASE = 0;
 
-    /**
-     * Mark bits
-     */
+    // Mark bit
     public static final int DEFAULT_MARKCOUNT_BITS = 4;
     public static final int MAX_MARKCOUNT_BITS = AVAILABLE_LOCAL_BITS - COUNT_BASE;
     private static final byte MARK_COUNT_INCREMENT = (byte) (1 << COUNT_BASE);
     private static final byte MARK_COUNT_MASK = (byte) (((1 << MAX_MARKCOUNT_BITS) - 1) << COUNT_BASE); // minus 1 for
-    // copy/alloc
 
+    // Mark bit state
     private byte markState = 1;
     private byte allocState = 0;
 
-    // TODO
+    // Region info
     private static final int META_DATA_PAGES_PER_REGION = 0;
     public static final int PAGES_PER_REGION = 512;
     // public static final int PAGES_PER_REGION = 256;
@@ -51,20 +51,18 @@ import org.vmmagic.unboxed.*;
     protected final Lock lock = VM.newLock("RegionSpaceGloabl");
     // TODO replace with shared queue?
     protected final AddressArray regionTable = AddressArray.create(REGION_NUMBER);
-    protected final AddressArray availableRegion = AddressArray.create(REGION_NUMBER);
+    public final AddressArray regionDataEnd = AddressArray.create(REGION_NUMBER);
+
+    private final int[] availableRegion = new int[REGION_NUMBER];
 
     int availableRegionCount = 0;
     int regionCount = 0;
 
     // Regions on which garbage collector will be executed
-    protected static List<Integer> collectionSet = new ArrayList<Integer>();
+    private final int[] collectionSet = new int[REGION_NUMBER];
+    private int collectionSetSize = 0;
 
-    // protected static Map<Integer, Integer> regionLiveBytes = new HashMap<Integer, Integer>();
-    // protected static Map<Integer, Integer> regionDeadBytes = new HashMap<Integer, Integer>();
-    // protected final Map<Integer, Boolean> requireRelocation = new HashMap<Integer, Boolean>();
-
-
-    private final int[] regionDeadBytes = new int[REGION_NUMBER];
+    // Regions info
     private final int[] regionLiveBytes = new int[REGION_NUMBER];
     private final boolean[] requireRelocation  = new boolean[REGION_NUMBER];
 
@@ -130,6 +128,10 @@ import org.vmmagic.unboxed.*;
         return testMarkState(object);
     }
 
+    public Address regionFromIx(int ix) {
+        return regionTable.get(ix);
+    }
+
     /**
      * Prepare for the next GC.
      */
@@ -140,55 +142,54 @@ import org.vmmagic.unboxed.*;
 
         this.resetRegionLiveBytes();
         this.resetRequireRelocation();
-        this.resetRegionDeadBytes();
 
-        collectionSet.clear();
+        // collectionSet.clear();
+        collectionSetSize = 0;
     }
 
     /**
      * Give a new region to the allocator.
      *
-     * @return
+     * @return -1 if no avaliable region, else the index of that region in RegionTable
      */
     @Inline
     @Interruptible
-    public Address getRegion() {
+    public int getRegion() {
         Log.writeln("[getRegion] enter");
 
         lock.acquire();
         if (availableRegionCount == 0) {
             lock.release();
-            // no available region
-            // Address newRegion = acquire(10000);
 
             Log.writeln("[getRegion] pool has no available region, try to acquire pages");
             Address newRegion = acquire(PAGES_PER_REGION);
             Log.writeln("[getRegion] new region: ", newRegion.toInt());
             if (newRegion.EQ(Address.zero())) {
                 Log.writeln("[getRegion] acquire failed, exit");
+                return -1;
             } else {
                 Log.writeln("[getRegion] acquire success, exit");
             }
-            Log.writeln("[getRegion] acquire ends");
                 
             lock.acquire();
             regionTable.set(regionCount, newRegion);
-
-            // regionLiveBytes.put(newRegion.toInt(), 0);
-            // regionDeadBytes.put(newRegion.toInt(), 0);
-            // requireRelocation.put(newRegion.toInt(), false);
-
             regionCount++;
             lock.release();
-            return newRegion;
+
+            return regionCount - 1;
         }
+
         Log.writeln("[getRegion] pool has available regions, exit");
-        Address newRegion = availableRegion.get(availableRegionCount);
+        int newRegion = availableRegion[availableRegionCount];
         availableRegionCount--;
         lock.release();
 
         VM.assertions._assert(availableRegionCount >= 0);
         return newRegion;
+    }
+
+    public void setDataEnd(int ix, Address dataEnd) {
+        regionDataEnd.set(ix, dataEnd);
     }
 
     /**
@@ -199,7 +200,6 @@ import org.vmmagic.unboxed.*;
         for (int i = 0; i < REGION_NUMBER; i++) {
             // availableRegionCount++;
             regionTable.set(i, Address.zero());
-            availableRegion.set(i, Address.zero());
         }
     }
 
@@ -239,7 +239,6 @@ import org.vmmagic.unboxed.*;
     @Inline
     public ObjectReference traceObject(TransitiveClosure trace, ObjectReference object, int allocator) {
         if (testAndMark(object)) {
-            Log.writeln("[traceObject] new object");
             int region = regionOf(object);
             updateRegionliveBytes(region, object);
             trace.processNode(object);
@@ -270,44 +269,66 @@ import org.vmmagic.unboxed.*;
     }
 
     /**
-     * Author: Mahideep Tumati
-     * Create a list of Adress on which GC needs to be implemented
+     * Collection set
      *
-     * @param trace
-     * @param object
-     * @param allocator
      * @return
      */
-    @Inline
     public void updateCollectionSet() {
-        // // calculate dead Bytes from lives
-        // updateDeadBytesInformation();
-        // regionDeadBytes = sortAddressMapByValueDesc(regionDeadBytes);
+        Log.writeln("[updateCollectionSet] enter");
+        // calculate dead Bytes from lives
+        // updateDeadBytes();
 
-        // int totalAvailableBytes = REGION_SIZE * availableRegionCount;
+        // int max_collection_set_size = REGION_NUMBER - regionCount;
+        // For testing purpose, we currently only choose half of the regions to evacuate
+        collectionSetSize = (int)(0.5 * regionCount);
 
-        // int counter = 0;
-        // for (Map.Entry<Integer, Integer> region : regionDeadBytes.entrySet()) {
-        //     if (regionLiveBytes.get(region.getKey()) <= totalAvailableBytes) {
-        //         if (counter < availableRegionCount) {
-        //             collectionSet.add(region.getKey());
-        //             requireRelocation.put(region.getKey(), true);
-        //             // totalAvailableBytes -= regionLiveBytes.get(region.getKey());
-        //             counter++;
-        //         } else {
-        //             break;
-        //         }
-        //     }
-        // }
+        int[] sorted = sortTableByLiveBytes();
+        // sort regionTable by dead bytes
+
+        // derive the collection set
+        for (int i=0; i<collectionSetSize; i++) {
+            collectionSet[i] = sorted[i];
+            requireRelocation[sorted[i]] = true;
+        }
     }
 
-     @Inline
-     public void updateDeadBytesInformation() {
-        // for (Map.Entry<Integer, Integer> addressEntry : regionLiveBytes.entrySet()) {
-        //     Address dataEnd = BumpPointer.getDataEnd(Address.fromLong(new Long(addressEntry.getKey())));
-        //     regionDeadBytes.put(addressEntry.getKey(),
-        //             (dataEnd.toInt() - addressEntry.getKey()) - addressEntry.getValue());
-        // }
+    // ascending order
+    public int[] sortTableByLiveBytes() {
+        int[] sorted = new int[regionCount];
+
+        // initiliaze
+        for (int i=0; i<regionCount; i++)
+            sorted[i] = i;
+        
+        // sort
+        for (int i=0; i<regionCount; i++) {
+            for (int j=1; j<regionCount-1; j++) {
+                if (regionLiveBytes[sorted[j-1]] > regionLiveBytes[sorted[j]]) {
+                    int tmp;
+                    tmp = sorted[j-1];
+                    sorted[j-1] = sorted[j];
+                    sorted[j] = tmp;
+                }
+            }
+        }
+
+        return sorted;
+    }
+
+    // /**
+    //  * Update dead bytes of each region by using (dataEnd-dataStart) - liveBytes
+    //  */
+    // public void updateDeadBytes() {
+    //     for (int i = 0; i < regionCount; i++) {
+    //         // regionDataEnd - (regionStart + DATA_START_OFFSET) - regionLiveBytes
+    //         regionDeadBytes[i] = REGION_SIZE - (regionDataEnd.get(i).diff(
+    //             regionTable.get(i).plus(DATA_START_OFFSET)
+    //             ).toInt() - regionLiveBytes[i]);
+    //     }
+    // }
+
+    public static Address getDataEnd(Address region) {
+        return region.plus(DATA_END_OFFSET).loadAddress();
     }
 
     /**
@@ -329,22 +350,6 @@ import org.vmmagic.unboxed.*;
         VM.objectModel.writeAvailableByte(object, newValue);
         return true;
     }
-
-    /**
-     * Return the mark state incremented or decremented by one.
-     *
-     * @param increment If true, then return the incremented value else return the
-     *                  decremented value
-     * @return the mark state incremented or decremented by one.
-     */
-    // private byte deltaMarkState(boolean increment) {
-    //     byte mask = (byte) (((1 << Options.markSweepMarkBits.getValue()) - 1) << COUNT_BASE);
-    //     byte rtn = (byte) (increment ? markState + MARK_COUNT_INCREMENT : markState - MARK_COUNT_INCREMENT);
-    //     rtn &= mask;
-    //     if (VM.VERIFY_ASSERTIONS)
-    //         VM.assertions._assert((markState & ~MARK_COUNT_MASK) == 0);
-    //     return rtn;
-    // }
 
     /**
      * Perform any required initialization of the GC portion of the header.
@@ -397,17 +402,6 @@ import org.vmmagic.unboxed.*;
     }
 
     /**
-     * Set all regions' dead bytes to 0. (may not necessary)
-     */
-    @Inline
-    private void resetRegionDeadBytes() {
-        // assert regionTable has been initialized
-        for (int i = 0; i < regionCount; i++) {
-            regionDeadBytes[i] = 0;
-        }
-    }
-
-    /**
      * All regions do not require relocation.
      */
     @Inline
@@ -427,8 +421,8 @@ import org.vmmagic.unboxed.*;
     @Inline
     private void updateRegionliveBytes(int region, ObjectReference object) {
         // update the region's live bytes
-        Log.writeln("[updateRegionliveBytes] size = ", regionLiveBytes[region]);
-        Log.writeln("[updateRegionliveBytes] + ", sizeOf(object));
+        // Log.writeln("[updateRegionliveBytes] size = ", regionLiveBytes[region]);
+        // Log.writeln("[updateRegionliveBytes] + ", sizeOf(object));
         regionLiveBytes[region] += sizeOf(object);
     }
 
@@ -480,7 +474,6 @@ import org.vmmagic.unboxed.*;
      */
     @Inline
     public ObjectReference traceEvacuateObject(TransitiveClosure trace, ObjectReference object, int allocator) {
-
     //     if (relocationRequired(object)) {
     //         Word forwardingWord = ForwardingWord.attemptToForward(object);
     //         if (ForwardingWord.stateIsForwardedOrBeingForwarded(forwardingWord)) {
@@ -525,7 +518,6 @@ import org.vmmagic.unboxed.*;
         for (int i=0; i<regionCount; i++) {
             Log.write("region: ", i);
             Log.write(", live bytes: ", regionLiveBytes[i]);
-            Log.write(", dead bytes: ", regionDeadBytes[i]);
             int isRequired = requireRelocation[i] ? 1 : 0;
             Log.write(", require relocation: ", isRequired);
             Log.writeln();

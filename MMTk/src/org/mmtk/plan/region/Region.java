@@ -28,24 +28,6 @@ import org.vmmagic.unboxed.Extent;
  */
 @Uninterruptible
 public class Region extends StopTheWorld {
-
-
-  public static final short UPDATE_COLLECTION_SET = Phase.createSimple("update-collection-set");
-  public static final short EVACUATE = Phase.createSimple("evacuate");
-
-
-  public short collection = Phase.createComplex("collection", null,
-      Phase.scheduleComplex(initPhase),
-      Phase.scheduleComplex(rootClosurePhase),
-      Phase.scheduleComplex(refTypeClosurePhase),
-
-      Phase.scheduleGlobal(UPDATE_COLLECTION_SET),
-      Phase.scheduleCollector(EVACUATE),
-
-      Phase.scheduleComplex(forwardPhase),
-      Phase.scheduleComplex(completeClosurePhase),
-      Phase.scheduleComplex(finishPhase));
-
   private static final int NET_META_DATA_BYTES_PER_REGION = 0;
   protected static final int META_DATA_PAGES_PER_REGION_WITH_BITMAP = Conversions
       .bytesToPages(Extent.fromIntSignExtend(NET_META_DATA_BYTES_PER_REGION));
@@ -104,12 +86,14 @@ public class Region extends StopTheWorld {
       return;
     }
 
-    // if (phaseId == UPDATE_COLLECTION_SET) {
-    //   updateCollectionSet();
-    // }
+    if (phaseId == UPDATE_COLLECTION_SET) {
+      Log.writeln("<GC> UPDATE_COLLECITON_SET global");
+      return;
+    }
 
     if (phaseId == RELEASE) {
     //   regionSpace.release();
+      regionSpace.updateCollectionSet();
       regionSpace.release();
       regionSpace.debug_info();
     }
@@ -141,10 +125,5 @@ public class Region extends StopTheWorld {
     TransitiveClosure.registerSpecializedScan(SCAN_RS, RegionTraceLocal.class);
     TransitiveClosure.registerSpecializedScan(EVA_RS, RegionEvacuateLocal.class);
     super.registerSpecializedMethods();
-  }
-
-  @Inline
-  public void updateCollectionSet() {
-    Region.regionSpace.updateCollectionSet();
   }
 }

@@ -39,7 +39,6 @@ import org.vmmagic.unboxed.ObjectReference;
  */
 @Uninterruptible
 public class RegionCollector extends StopTheWorldCollector {
-
   /************************************************************************
    * Instance fields
    */
@@ -86,10 +85,11 @@ public class RegionCollector extends StopTheWorldCollector {
       return;
     }
 
-    // if (phaseId == Region.EVACUATE) {
-    //   // eva.completeTrace();
-    //   return;
-    // }
+    if (phaseId == Region.EVACUATE) {
+      Log.writeln("<GC> EVACUATE collector");
+      // eva.completeTrace();
+      return;
+    }
 
     // if (phaseId == Region.RELEASE) {
     //   trace.release();

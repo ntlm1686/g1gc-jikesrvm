@@ -28,6 +28,7 @@ import static org.mmtk.utility.Constants.MIN_ALIGNMENT;
     private Address limit;
     /** current contiguous region */
     protected Address region;
+    protected int regionIx;
 
     public static final Offset DATA_END_OFFSET = Offset.zero();
     public static final Offset DATA_START_OFFSET = alignAllocationNoFill(
@@ -72,7 +73,7 @@ import static org.mmtk.utility.Constants.MIN_ALIGNMENT;
         cursor = end;
         end.plus(SIZE_OF_TWO_X86_CACHE_LINES_IN_BYTES).prefetch();
         // Log.writeln(" -> ", cursor.toInt());
-        setDataEnd(region, cursor);
+        setDataEnd(cursor);
         return start;
     }
 
@@ -86,10 +87,17 @@ import static org.mmtk.utility.Constants.MIN_ALIGNMENT;
      */
     @Override
     protected Address allocSlowOnce(int bytes, int alignment, int offset) {
+        Address start = Address.zero();
+
         Log.writeln("[allocSlowOnce] enter");
 
         Log.writeln("[allocSlowOnce] try to get region from pool");
-        Address start = space.getRegion();
+        int ix = space.getRegion();
+
+        if (ix != -1) {
+            start = space.regionFromIx(ix);
+        }
+
         if (start.isZero()) {
             Log.writeln("[allocSlowOnce] pool has no region, exit");
             return start; // failed allocation
@@ -98,26 +106,16 @@ import static org.mmtk.utility.Constants.MIN_ALIGNMENT;
         Log.writeln("[allocSlowOnce] pool gave a new region");
 
         // update limit
-        updateMetaData(start);
+        regionIx = ix;
+
+        region = start; // setup new region
         cursor = region.plus(DATA_START_OFFSET);
         limit = start.plus(RegionSpace.REGION_EXTENT);
+        setDataEnd(cursor); // data end of current region
+
         Log.writeln("[allocSlowOnce] new limit: ", limit.toInt());
-
-
         Log.writeln("[allocSlowOnce] region info updated, entering alloc");
         return alloc(bytes, alignment, offset);
-    }
-
-    /**
-     * Update the metadata to reflect the addition of a new region.
-     *
-     * @param start The start of the new region
-     */
-    @Inline
-    private void updateMetaData(Address start) {
-        Log.writeln("[updateMetaData] enter");
-        region = start; // setup new region
-        setDataEnd(region, cursor); // data end of current region
     }
 
     /**
@@ -126,18 +124,8 @@ import static org.mmtk.utility.Constants.MIN_ALIGNMENT;
      * @param region
      * @param end The end of the current region
      */
-    public static void setDataEnd(Address region, Address endAddress) {
-        region.store(endAddress, DATA_END_OFFSET);
-    }
-
-    /**
-     * Return the data end of a region. 
-     * 
-     * @param region
-     * @return the data end of the region
-     */
-    @Inline
-    public static Address getDataEnd(Address region) {
-        return region.plus(DATA_END_OFFSET).loadAddress();
+    public void setDataEnd(Address endAddress) {
+        // region.store(endAddress, DATA_END_OFFSET);
+        space.setDataEnd(regionIx, endAddress);
     }
 }
