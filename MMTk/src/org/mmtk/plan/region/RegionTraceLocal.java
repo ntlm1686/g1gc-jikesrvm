@@ -15,7 +15,7 @@ package org.mmtk.plan.region;
 import org.mmtk.plan.TraceLocal;
 import org.mmtk.plan.Trace;
 import org.mmtk.policy.Space;
-
+import org.mmtk.utility.Log;
 import org.vmmagic.pragma.*;
 import org.vmmagic.unboxed.*;
 
@@ -41,7 +41,8 @@ public final class RegionTraceLocal extends TraceLocal {
   public boolean isLive(ObjectReference object) {
     if (object.isNull()) return false;
     if (Space.isInSpace(Region.RS, object)) {
-      return Region.regionSpace.isLive(object);
+      return true;
+      // return Region.regionSpace.isLive(object);
     }
     return super.isLive(object);
   }
@@ -49,9 +50,11 @@ public final class RegionTraceLocal extends TraceLocal {
   @Inline
   @Override
   public ObjectReference traceObject(ObjectReference object) {
-    if (object.isNull()) return object;
+    if (object.isNull()) {
+      return object;
+    }
     if (Space.isInSpace(Region.RS, object))
-      return Region.regionSpace.traceObject(this, object);
+      return Region.regionSpace.traceObject(this, object, Region.ALLOC_DEFAULT);
     return super.traceObject(object);
   }
 }

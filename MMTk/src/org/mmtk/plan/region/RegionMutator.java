@@ -75,7 +75,7 @@ public class RegionMutator extends StopTheWorldMutator {
   @Inline
   @Override
   public void postAlloc(ObjectReference ref, ObjectReference typeRef, int bytes, int allocator) {
-    if (allocator == Region.ALLOC_RS)
+    if (allocator == Region.ALLOC_DEFAULT)
       Region.regionSpace.postAlloc(ref);
     else
       super.postAlloc(ref, typeRef, bytes, allocator);
@@ -99,13 +99,15 @@ public class RegionMutator extends StopTheWorldMutator {
   @Override
   public final void collectionPhase(short phaseId, boolean primary) {
     if (phaseId == Region.PREPARE) {
+      super.collectionPhase(phaseId, primary);
       rl.reset(); // return the region to the global pool, since it might be evacuated later.
+      return;
     }
 
     // if (phaseId == Region.RELEASE) {
     //   ;// do nothing
     // }
     // rl.reset();
-    // super.collectionPhase(phaseId, primary);
+    super.collectionPhase(phaseId, primary);
   }
 }

@@ -1,17 +1,11 @@
 package org.mmtk.policy;
 
-import java.beans.PropertyVetoException;
 import java.util.*;
 
 import static org.mmtk.utility.Constants.BYTES_IN_PAGE;
-import static org.mmtk.utility.alloc.RegionAllocator.DATA_START_OFFSET;
 
-import org.mmtk.utility.options.Options;
 import org.mmtk.plan.TransitiveClosure;
-import org.mmtk.plan.region.RegionConstraints;
 import org.mmtk.utility.*;
-import org.mmtk.utility.alloc.BumpPointer;
-import org.mmtk.utility.alloc.RegionAllocator;
 import org.mmtk.utility.heap.*;
 import org.mmtk.vm.Lock;
 import org.mmtk.vm.VM;
@@ -41,7 +35,6 @@ import org.vmmagic.unboxed.*;
 
     private byte markState = 1;
     private byte allocState = 0;
-    private boolean isAllocAsMarked = false;
 
     // TODO
     private static final int META_DATA_PAGES_PER_REGION = 0;
@@ -104,12 +97,21 @@ import org.vmmagic.unboxed.*;
      * Release pages
      */
     public void release() {
-        for (Integer regionAddress : collectionSet) {
-            release(Address.fromLong(new Long(regionAddress)));
-            availableRegionCount++;
-            assert availableRegionCount < REGION_NUMBER;
-            availableRegion.set(availableRegionCount, Address.fromLong(new Long(regionAddress)));
-        }
+        // for (Integer regionAddress : collectionSet) {
+        //     release(Address.fromLong(new Long(regionAddress)));
+        //     availableRegionCount++;
+        //     assert availableRegionCount < REGION_NUMBER;
+        //     availableRegion.set(availableRegionCount, Address.fromLong(new Long(regionAddress)));
+        // }
+
+        // flip mark bit
+        byte tmp = allocState;
+        allocState = markState;
+        markState = tmp;
+
+        // markState = deltaMarkState(true);
+        Log.writeln("[prepare] allocState: ", allocState);
+        Log.writeln("[prepare] markState: ", markState);
     }
 
     @Override
@@ -134,11 +136,6 @@ import org.vmmagic.unboxed.*;
     public void prepare() {
         // flip the mark bit
         Log.writeln("[prepare] enter");
-        allocState = markState;
-        markState = deltaMarkState(true);
-        Log.writeln("[prepare] allocState: ", allocState);
-        Log.writeln("[prepare] markState: ", markState);
-
         // reset the regions' info
 
         this.resetRegionLiveBytes();
@@ -195,33 +192,6 @@ import org.vmmagic.unboxed.*;
     }
 
     /**
-     * Sort regionTable by address
-     */
-    private void sortTable() {
-        AddressArray sortedRegionTable = AddressArray.create(REGION_NUMBER);
-        for (int i = 0; i < REGION_NUMBER; i++) {
-            Address regionAddress = regionTable.get(i);
-            sortedRegionTable.set(i, regionAddress);
-        }
-        boolean sorted = false;
-        while(!sorted) {
-            sorted = true;
-            for (int i = 0; i < REGION_NUMBER - 1; i++) {
-                if (sortedRegionTable.get(i).toLong() > sortedRegionTable.get(i+1).toLong()) {
-                    sortedRegionTable.set(i, Address.fromLong(sortedRegionTable.get(i).toLong() + sortedRegionTable.get(i+1).toLong()));
-                    sortedRegionTable.set(i+1, Address.fromLong(sortedRegionTable.get(i).toLong() - sortedRegionTable.get(i+1).toLong()));
-                    sortedRegionTable.set(i, Address.fromLong(sortedRegionTable.get(i).toLong() - sortedRegionTable.get(i+1).toLong()));
-                    sorted = false;
-                }
-            }
-        }
-        for (int i = 0; i < REGION_NUMBER; i++) {
-            Address regionAddress = sortedRegionTable.get(i);
-            regionTable.set(i, regionAddress);
-        }
-    }
-
-    /**
      * Initialize the regions.
      */
     @Inline
@@ -269,6 +239,7 @@ import org.vmmagic.unboxed.*;
     @Inline
     public ObjectReference traceObject(TransitiveClosure trace, ObjectReference object, int allocator) {
         if (testAndMark(object)) {
+            Log.writeln("[traceObject] new object");
             int region = regionOf(object);
             updateRegionliveBytes(region, object);
             trace.processNode(object);
@@ -366,14 +337,14 @@ import org.vmmagic.unboxed.*;
      *                  decremented value
      * @return the mark state incremented or decremented by one.
      */
-    private byte deltaMarkState(boolean increment) {
-        byte mask = (byte) (((1 << Options.markSweepMarkBits.getValue()) - 1) << COUNT_BASE);
-        byte rtn = (byte) (increment ? markState + MARK_COUNT_INCREMENT : markState - MARK_COUNT_INCREMENT);
-        rtn &= mask;
-        if (VM.VERIFY_ASSERTIONS)
-            VM.assertions._assert((markState & ~MARK_COUNT_MASK) == 0);
-        return rtn;
-    }
+    // private byte deltaMarkState(boolean increment) {
+    //     byte mask = (byte) (((1 << Options.markSweepMarkBits.getValue()) - 1) << COUNT_BASE);
+    //     byte rtn = (byte) (increment ? markState + MARK_COUNT_INCREMENT : markState - MARK_COUNT_INCREMENT);
+    //     rtn &= mask;
+    //     if (VM.VERIFY_ASSERTIONS)
+    //         VM.assertions._assert((markState & ~MARK_COUNT_MASK) == 0);
+    //     return rtn;
+    // }
 
     /**
      * Perform any required initialization of the GC portion of the header.
@@ -385,7 +356,9 @@ import org.vmmagic.unboxed.*;
     @Inline
     public void initializeHeader(ObjectReference object, boolean alloc) {
         byte oldValue = VM.objectModel.readAvailableByte(object);
-        byte newValue = (byte) ((oldValue & ~MARK_COUNT_MASK) | (alloc && !isAllocAsMarked ? allocState : markState));
+        // byte newValue = (byte) ((oldValue & ~MARK_COUNT_MASK) | (alloc && !isAllocAsMarked ? allocState : markState));
+        byte newValue = (byte) ((oldValue & ~MARK_COUNT_MASK) | allocState);
+
         VM.objectModel.writeAvailableByte(object, newValue);
     }
 
@@ -397,8 +370,6 @@ import org.vmmagic.unboxed.*;
      */
     @Inline
     private boolean testMarkState(ObjectReference object) {
-        if (VM.VERIFY_ASSERTIONS)
-            VM.assertions._assert((markState & ~MARK_COUNT_MASK) == 0);
         return (VM.objectModel.readAvailableByte(object) & MARK_COUNT_MASK) == markState;
     }
 
@@ -456,6 +427,8 @@ import org.vmmagic.unboxed.*;
     @Inline
     private void updateRegionliveBytes(int region, ObjectReference object) {
         // update the region's live bytes
+        Log.writeln("[updateRegionliveBytes] size = ", regionLiveBytes[region]);
+        Log.writeln("[updateRegionliveBytes] + ", sizeOf(object));
         regionLiveBytes[region] += sizeOf(object);
     }
 
@@ -466,7 +439,7 @@ import org.vmmagic.unboxed.*;
     private int sizeOf(ObjectReference object) {
         Address objectStart = object.toAddress();
         Address objectEnd = VM.objectModel.getObjectEndAddress(object);
-        Offset size = objectStart.diff(objectEnd);
+        Offset size = objectEnd.diff(objectStart);
         int liveBytes = size.toInt();
         return liveBytes;
     }

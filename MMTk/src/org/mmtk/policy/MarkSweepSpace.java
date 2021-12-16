@@ -20,7 +20,7 @@ import org.mmtk.utility.options.Options;
 import org.mmtk.utility.options.MarkSweepMarkBits;
 import org.mmtk.utility.options.EagerCompleteSweep;
 import org.mmtk.utility.HeaderByte;
-
+import org.mmtk.utility.Log;
 import org.mmtk.vm.VM;
 
 import org.vmmagic.pragma.*;
@@ -206,6 +206,9 @@ public final class MarkSweepSpace extends SegregatedFreeListSpace {
       zeroLiveBits();
     }
     inMSCollection = true;
+    // Log.write("[prepare]");
+    // Log.write("markState: ", markState);
+    // Log.writeln("; allocState: ", allocState);
   }
 
   /**

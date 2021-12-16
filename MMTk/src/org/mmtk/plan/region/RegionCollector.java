@@ -15,6 +15,7 @@ package org.mmtk.plan.region;
 import org.mmtk.plan.*;
 import org.mmtk.policy.RegionLocal;
 import org.mmtk.utility.ForwardingWord;
+import org.mmtk.utility.Log;
 import org.mmtk.vm.VM;
 
 import org.vmmagic.pragma.*;
@@ -74,10 +75,13 @@ public class RegionCollector extends StopTheWorldCollector {
   @Override
   public final void collectionPhase(short phaseId, boolean primary) {
     if (phaseId == Region.PREPARE) {
+      super.collectionPhase(phaseId, primary);
       rl.reset();
+      return;
     }
 
     if (phaseId == Region.CLOSURE) {
+      Log.writeln("<GC> CLOSURE collector");
       trace.completeTrace();
       return;
     }
@@ -91,8 +95,7 @@ public class RegionCollector extends StopTheWorldCollector {
     //   trace.release();
     //   eva.release();
     // }
-
-    // super.collectionPhase(phaseId, primary);
+    super.collectionPhase(phaseId, primary);
   }
 
   /****************************************************************************

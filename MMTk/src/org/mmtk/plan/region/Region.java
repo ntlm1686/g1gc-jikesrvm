@@ -91,13 +91,17 @@ public class Region extends StopTheWorld {
   @Override
   public final void collectionPhase(short phaseId) {
     if (phaseId == PREPARE) {
-      Log.writeln("<GC Started> PREPARE");
+      Log.writeln("<GC> PREPARE global");
       regionSpace.prepare();
       regionTrace.prepare();
-      evaTrace.prepare();
+      // evaTrace.prepare();
+      super.collectionPhase(phaseId);
+      return;
     }
     if (phaseId == CLOSURE) {
-      ;
+      Log.writeln("<GC> CLOSURE global");
+      regionTrace.prepare();
+      return;
     }
 
     // if (phaseId == UPDATE_COLLECTION_SET) {
@@ -106,9 +110,11 @@ public class Region extends StopTheWorld {
 
     if (phaseId == RELEASE) {
     //   regionSpace.release();
+      regionSpace.release();
       regionSpace.debug_info();
     }
-    // super.collectionPhase(phaseId);
+
+    super.collectionPhase(phaseId);
   }
 
   /*****************************************************************************
