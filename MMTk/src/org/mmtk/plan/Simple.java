@@ -161,6 +161,10 @@ public abstract class Simple extends Plan {
       Phase.scheduleCollector  (COMPLETE),
       Phase.scheduleGlobal     (COMPLETE));
 
+  // Region-based
+  public static final short UPDATE_COLLECTION_SET = Phase.createSimple("update-collection-set");
+  public static final short EVACUATE = Phase.createSimple("evacuate");
+
   /**
    * This is the phase that is executed to perform a collection.
    */
@@ -168,6 +172,11 @@ public abstract class Simple extends Plan {
       Phase.scheduleComplex(initPhase),
       Phase.scheduleComplex(rootClosurePhase),
       Phase.scheduleComplex(refTypeClosurePhase),
+
+
+      Phase.scheduleGlobal(UPDATE_COLLECTION_SET),
+      Phase.scheduleCollector(EVACUATE),
+
       Phase.scheduleComplex(forwardPhase),
       Phase.scheduleComplex(completeClosurePhase),
       Phase.scheduleComplex(finishPhase));
@@ -252,6 +261,14 @@ public abstract class Simple extends Plan {
     }
 
     if (Options.sanityCheck.getValue() && sanityChecker.collectionPhase(phaseId)) {
+      return;
+    }
+
+    if (phaseId == UPDATE_COLLECTION_SET) {
+      return;
+    }
+
+    if (phaseId == EVACUATE) {
       return;
     }
 

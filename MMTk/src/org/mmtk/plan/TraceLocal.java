@@ -184,7 +184,6 @@ public abstract class TraceLocal extends TransitiveClosure {
     }
   }
 
-
   /****************************************************************************
    *
    * Externally visible Object processing and tracing
@@ -483,6 +482,7 @@ public abstract class TraceLocal extends TransitiveClosure {
    */
   @Inline
   public void completeTrace() {
+    Log.writeln("[completeTrace] enter");
     logMessage(4, "Processing GC in parallel");
     if (!rootLocations.isEmpty()) {
       processRoots();
