@@ -26,3 +26,6 @@ If you see the unsuppoted class file version error, you have to specify the vers
 ```
 $ javac -source 1.6 -target 1.6 HelloWorld.java
 ```
+
+## License
+EPL
