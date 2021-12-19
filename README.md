@@ -1,8 +1,12 @@
 ## Region-based memory management of JikesRVM
 This repository contains a copy of Jikes RVM patched with an implement of the [region-based garbage collection algorithm](https://archive.ph/20121020025006/http://www3.interscience.wiley.com/journal/113446436/abstract?CRETRY=1&SRETRY=0).
 
-The Region-based GC contains parallel marking nad parallel evacuation.
+The implementation includes:
+- parallel marking
+- updating collection set
+- parallel evacuation
 
+We provide a ```RegionSpace```, the file is under ```MMTk/src/org/mmtk/policy```, which defines the policy of managing a heap as mutiple regions. To allocate objects to this region, we provide a modified version of ```BumpPointer```. [MMTk](https://github.com/mmtk/mmtk-jikesrvm) provides us the binding to manage the memory in JikesRVM.
 
 The official Jikes RVM website and repository can be found [here](https://www.jikesrvm.org/).
 
