@@ -21,3 +21,8 @@ You can use the compiled virtual machine to run java programs, if you are using 
 ```
 $ dist/development_x86_64-linux/rvm HelloWorld
 ```
+
+If you see the unsuppoted class file version error, you have to specify the version of class files for VM.
+```
+$ javac -source 1.6 -target 1.6 HelloWorld.java
+```
