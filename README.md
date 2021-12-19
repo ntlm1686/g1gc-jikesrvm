@@ -1,7 +1,23 @@
-# Region-based GC
+## Region-based memory management of JikesRVM
 
-##  TODO
+## Build
 
-1. region layout in RegionAllocator for linear scanning and relocation indicator
+### Prerequisites
+- JDK (>= 6 and < 9)
+- Ant (>= 1.7 and < 1.10)
+- GCC with multilibs
+- Bison
 
-2. region liveness
+After all the requirements are satisified, run the command inside the project folder
+```
+$ bin/buildit localhost development
+```
+
+### Use docker
+See [dockerfile](https://github.com/ljjsalt/jikesrvm-dev-env)
+
+## Usage
+You can use the compiled virtual machine to run java programs, if you are using a x86 64bit linux machine, you can run the command below
+```
+$ dist/development_x86_64-linux/rvm HelloWorld
+```
