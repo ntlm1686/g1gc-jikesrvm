@@ -18,7 +18,7 @@ The official Jikes RVM website and repository can be found [here](https://www.ji
 - GCC with multilibs
 - Bison
 
-After all the requirements are satisified, run the command inside the project folder
+After all the requirements are satisified, run the command at root folder of this project.
 ```
 $ bin/buildit localhost development
 ```
