@@ -6,7 +6,7 @@ The implementation includes:
 - updating collection set
 - parallel evacuation
 
-We provide a ```RegionSpace```, the file is under ```MMTk/src/org/mmtk/policy```, which defines the policy of managing a heap as mutiple regions. To allocate objects to this region, we provide a modified version of ```BumpPointer```. [MMTk](https://github.com/mmtk/mmtk-jikesrvm) provides us the binding to manage the memory in JikesRVM.
+We provide a ```RegionSpace```, the file is under ```MMTk/src/org/mmtk/policy```, which defines the policy of managing a heap as mutiple regions. To allocate objects to this region, we provide a modified version of ```BumpPointer```. [MMTk](https://github.com/mmtk/mmtk-jikesrvm) provides us the bindings to manage the memory in JikesRVM.
 
 The official Jikes RVM website and repository can be found [here](https://www.jikesrvm.org/).
 
