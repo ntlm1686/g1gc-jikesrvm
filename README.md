@@ -1,6 +1,7 @@
 ## Region-based memory management of JikesRVM
 This repository contains a copy of Jikes RVM patched with an implement of the region-based garbage collection algorithm.
 
+The official Jikes RVM website and repository can be found [here](https://www.jikesrvm.org/)
 
 ## Build
 
