@@ -16,6 +16,7 @@ After all the requirements are satisified, run the command inside the project fo
 ```
 $ bin/buildit localhost development
 ```
+RVM will be in the dist directory.
 
 ### Use docker
 See [dockerfile](https://github.com/ljjsalt/jikesrvm-dev-env)
